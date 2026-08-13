@@ -15,6 +15,7 @@
   .tab-content { display: none; }
   .tab-content.active { display: block; }
   .tab-btn.active { background-color: #2563eb; color: #fff; }
+  .maintSub.active { background-color: #2563eb; color: #fff; }
   .modal { display: none; }
   .modal.active { display: flex; }
   .fade-in { animation: fadeIn .15s ease-out; }
@@ -34,7 +35,9 @@
 <div id="unauthScreen" class="p-8 text-center mt-10 max-w-md mx-auto bg-white rounded-xl shadow-sm">
   <p class="text-4xl mb-3">🔒</p>
   <p class="font-bold mb-2">ログインしてください</p>
-  <p class="text-sm text-slate-500">車両情報はGoogleアカウントに紐づけてクラウド（Cloud Firestore）に保存されます。同じアカウントで別デバイスからログインすれば同じデータを確認・編集できます。</p>
+  <p class="text-sm text-slate-500 mb-4">車両情報はGoogleアカウントに紐づけてクラウド（Cloud Firestore）に保存されます。同じアカウントで別デバイスからログインすれば同じデータを確認・編集できます。</p>
+  <button id="loginBtnMain" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm w-full">🔑 Googleでログイン</button>
+  <p id="loginStatus" class="text-xs text-slate-400 mt-3 hidden">ログイン処理中…</p>
 </div>
 
 <main id="authScreen" class="max-w-5xl mx-auto px-3 sm:px-4 py-4 hidden space-y-4">
@@ -70,12 +73,12 @@
           <input type="checkbox" id="fFull" checked> 満タン
         </label>
         <div class="col-span-2 border border-slate-300 p-2 rounded-lg bg-slate-50 space-y-1">
-  <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 text-white py-2 rounded-lg font-bold text-xs">
-    🧾 レシートをスキャンして自動入力
-  </button>
-  <input type="file" id="fReceiptScan" accept="image/*" capture="environment" class="hidden">
-  <p id="scanStatus" class="text-center text-xs text-slate-500 hidden"></p>
-</div>
+          <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 text-white py-2 rounded-lg font-bold text-xs">
+            🧾 レシートをスキャンして自動入力
+          </button>
+          <input type="file" id="fReceiptScan" accept="image/*" capture="environment" class="hidden">
+          <p id="scanStatus" class="text-center text-xs text-slate-500 hidden"></p>
+        </div>
         <button id="saveFuelBtn" class="col-span-2 bg-blue-600 text-white py-2 rounded-lg font-bold">＋ 記録追加</button>
       </div>
     </div>
@@ -171,26 +174,24 @@
   </div>
 </div>
 
-<!-- レシート拡大表示モーダル -->
-<div id="imgModal" class="modal fixed inset-0 z-50 bg-black/80 items-center justify-center p-3" onclick="this.classList.remove('active')">
-  <img id="imgModalSrc" class="max-w-full max-h-full rounded-lg">
-</div>
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp }
+  import {
+    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
+    onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  // ★★★ ここをご自身のFirebase設定に書き換えてください ★★★
+  // ご自身のFirebase設定（storageBucketは今のままでOK。新しいプロジェクトでは
+  // "〜.firebasestorage.app" 形式が正しい標準の値です）
   const firebaseConfig = {
     apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
-  authDomain: "my-car-manager-daab9.firebaseapp.com",
-  projectId: "my-car-manager-daab9",
-  storageBucket: "my-car-manager-daab9.firebasestorage.app",
-  messagingSenderId: "287236190745",
-  appId: "1:287236190745:web:caa18d35701205aa0db088"
+    authDomain: "my-car-manager-daab9.firebaseapp.com",
+    projectId: "my-car-manager-daab9",
+    storageBucket: "my-car-manager-daab9.firebasestorage.app",
+    messagingSenderId: "287236190745",
+    appId: "1:287236190745:web:caa18d35701205aa0db088"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -200,53 +201,66 @@
   let currentCarId = null;
 
   const $ = (id) => document.getElementById(id);
-  const loginBtn = $('loginBtn'), logoutBtn = $('logoutBtn');
-  const unauthScreen = $('unauthScreen'), authScreen = $('authScreen');
-  const globalCarSelect = $('globalCarSelect');
 
-  // ---------- タブ切り替え ----------
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      $(e.currentTarget.dataset.target).classList.add('active');
+  // ---------- ログイン処理 ----------
+  // setPersistenceは「保険的な対策」であり、これが今回の不具合を確実に解決する
+  // 保証はありません。まずは環境要因（アプリ内ブラウザ等）の確認と併用してください。
+  async function doLogin() {
+    try {
+      await setPersistence(auth, browserLocalPersistence);
+      await signInWithRedirect(auth, new GoogleAuthProvider());
+    } catch (err) {
+      alert("ログイン開始エラー\nコード: " + err.code + "\n内容: " + err.message);
+    }
+  }
+  $('loginBtn').addEventListener('click', doLogin);
+  $('loginBtnMain').addEventListener('click', () => {
+    $('loginStatus').classList.remove('hidden');
+    doLogin();
+  });
+  $('logoutBtn').addEventListener('click', () => signOut(auth));
+
+  getRedirectResult(auth)
+    .then((result) => { if (result?.user) console.log("ログイン成功:", result.user.displayName); })
+    .catch((err) => {
+      alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
     });
-  });
-  document.querySelectorAll('.maintSub').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
-      e.currentTarget.classList.add('active');
-      $('maintListActive').classList.toggle('hidden', e.currentTarget.dataset.status !== 'active');
-      $('maintListDone').classList.toggle('hidden', e.currentTarget.dataset.status !== 'done');
-    });
-  });
-
-  // ---------- 認証 ----------
-  loginBtn.addEventListener('click', () => signInWithRedirect(auth, new GoogleAuthProvider()));
-  logoutBtn.addEventListener('click', () => signOut(auth));
-
-  getRedirectResult(auth).catch((error) => {
-    alert("ログインエラー\nコード: " + error.code + "\n内容: " + error.message);
-  });
 
   onAuthStateChanged(auth, async (user) => {
     if (user) {
       currentUser = user;
-      loginBtn.classList.add('hidden');
-      logoutBtn.classList.remove('hidden');
-      unauthScreen.classList.add('hidden');
-      authScreen.classList.remove('hidden');
+      $('loginBtn').classList.add('hidden');
+      $('logoutBtn').classList.remove('hidden');
+      $('unauthScreen').classList.add('hidden');
+      $('authScreen').classList.remove('hidden');
       await loadCategories();
       await loadShops();
       await loadCars();
     } else {
       currentUser = null;
-      loginBtn.classList.remove('hidden');
-      logoutBtn.classList.add('hidden');
-      unauthScreen.classList.remove('hidden');
-      authScreen.classList.add('hidden');
+      $('loginBtn').classList.remove('hidden');
+      $('logoutBtn').classList.add('hidden');
+      $('unauthScreen').classList.remove('hidden');
+      $('authScreen').classList.add('hidden');
     }
+  });
+
+  // ---------- タブ切り替え ----------
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.target).classList.add('active');
+    });
+  });
+  document.querySelectorAll('.maintSub').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      $('maintListActive').classList.toggle('hidden', btn.dataset.status !== 'active');
+      $('maintListDone').classList.toggle('hidden', btn.dataset.status !== 'done');
+    });
   });
 
   // ---------- 共通：残り日数と色 ----------
@@ -258,7 +272,6 @@
   }
   function expiryColor(days) {
     if (days === null) return 'bg-slate-100 text-slate-400';
-    if (days < 0) return 'bg-red-100 text-red-700';
     if (days <= 30) return 'bg-red-100 text-red-700';
     if (days <= 60) return 'bg-yellow-100 text-yellow-700';
     return 'bg-green-100 text-green-700';
@@ -297,7 +310,9 @@
     });
     listEl.querySelectorAll('.catEditInput').forEach(inp => {
       inp.addEventListener('change', async () => {
-        await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: inp.value.trim() });
+        const newName = inp.value.trim();
+        if (!newName) return;
+        await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: newName });
         loadCategories();
       });
     });
@@ -355,7 +370,7 @@
   // ---------- 車両管理 ----------
   $('addCarBtn').addEventListener('click', () => {
     $('carDocId').value = '';
-    document.querySelectorAll('#carModal input').forEach(i => i.value = '');
+    document.querySelectorAll('#carModal input:not([type=hidden])').forEach(i => i.value = '');
     $('carModal').classList.add('active');
   });
   $('closeCarModal').addEventListener('click', () => $('carModal').classList.remove('active'));
@@ -389,7 +404,7 @@
     const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
     const list = $('carList');
     list.innerHTML = '';
-    globalCarSelect.innerHTML = '';
+    $('globalCarSelect').innerHTML = '';
     $('addCarBtn').disabled = snap.size >= 5;
     $('addCarBtn').classList.toggle('opacity-40', snap.size >= 5);
 
@@ -397,9 +412,10 @@
       const c = d.data();
       const opt = document.createElement('option');
       opt.value = d.id; opt.textContent = c.nickname;
-      globalCarSelect.appendChild(opt);
+      $('globalCarSelect').appendChild(opt);
 
       const shakenDays = daysUntil(c.shaken);
+      const jibaiDays = daysUntil(c.jibai);
       const insDays = daysUntil(c.insExpiry);
       const div = document.createElement('div');
       div.className = 'bg-white p-4 rounded-xl shadow-sm text-sm space-y-1';
@@ -407,8 +423,11 @@
         <h3 class="font-bold text-lg text-blue-700">${c.nickname}</h3>
         <p class="text-slate-500 text-xs">${c.maker||''} ${c.model||''} ${c.year? '('+c.year+'年)':''}</p>
         <p>走行距離: ${c.odo||0} km ／ ナンバー: ${c.plate||'-'}</p>
-        <span class="inline-block px-2 py-0.5 rounded text-xs ${expiryColor(shakenDays)}">車検: ${c.shaken||'未設定'}${shakenDays!==null?`（残り${shakenDays}日）`:''}</span>
-        <span class="inline-block px-2 py-0.5 rounded text-xs ${expiryColor(insDays)}">保険: ${c.insExpiry||'未設定'}${insDays!==null?`（残り${insDays}日）`:''}</span>
+        <div class="flex flex-wrap gap-1 mt-1">
+          <span class="px-2 py-0.5 rounded text-xs ${expiryColor(shakenDays)}">車検: ${c.shaken||'未設定'}${shakenDays!==null?`（残り${shakenDays}日）`:''}</span>
+          <span class="px-2 py-0.5 rounded text-xs ${expiryColor(jibaiDays)}">自賠責: ${c.jibai||'未設定'}${jibaiDays!==null?`（残り${jibaiDays}日）`:''}</span>
+          <span class="px-2 py-0.5 rounded text-xs ${expiryColor(insDays)}">任意保険: ${c.insExpiry||'未設定'}${insDays!==null?`（残り${insDays}日）`:''}</span>
+        </div>
         ${c.insStaff? `<p class="text-xs">担当: ${c.insStaff} <a href="tel:${c.insTel}" class="text-blue-600 underline">${c.insTel||''}</a></p>`:''}
         <div class="flex gap-2 pt-1">
           <button class="editCarBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集</button>
@@ -438,136 +457,90 @@
       });
     });
 
-    if (globalCarSelect.value) {
-      currentCarId = globalCarSelect.value;
+    if ($('globalCarSelect').value) {
+      currentCarId = $('globalCarSelect').value;
       loadFuel(); loadMaint();
     }
   }
-  globalCarSelect.addEventListener('change', () => {
-    currentCarId = globalCarSelect.value;
+  $('globalCarSelect').addEventListener('change', () => {
+    currentCarId = $('globalCarSelect').value;
     loadFuel(); loadMaint();
   });
 
-  // ---------- 給油記録（レシート撮影対応） ----------
-  function compressImage(file) {
-    return new Promise((resolve) => {
+  // ---------- レシートOCR：画像 → テキスト抽出（画像は保存しない） ----------
+  async function scanReceipt(file) {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const scale = Math.min(800 / img.width, 1);
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        img.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const scale = Math.min(1200 / img.width, 1);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            const { data: { text } } = await Tesseract.recognize(dataUrl, 'jpn+eng');
+            resolve(text);
+          } catch (err) { reject(err); }
         };
+        img.onerror = reject;
         img.src = e.target.result;
       };
+      reader.onerror = reject;
       reader.readAsDataURL(file);
     });
   }
-// ---------- レシートOCR：画像 → テキスト抽出 ----------
-async function scanReceipt(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          // OCR精度向上のため、幅1200px程度にリサイズしてから認識にかける
-          const canvas = document.createElement('canvas');
-          const scale = Math.min(1200 / img.width, 1);
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-          // 日本語＋英数字を認識対象にする（数字だけでも日本語レシートは'jpn'指定が必須）
-          const { data: { text } } = await Tesseract.recognize(dataUrl, 'jpn+eng');
-          resolve(text);
-        } catch (err) {
-          reject(err);
-        }
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-// ---------- OCR結果のテキストから日付・給油量・金額を推測 ----------
-function parseReceiptText(text) {
-  console.log('OCRで読み取ったテキスト:\n', text);
-  const result = {};
-
-  // 日付：2026/08/13、2026-08-13、2026年8月13日 などに対応
-  const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
-  if (dateMatch) {
-    const mm = dateMatch[2].padStart(2, '0');
-    const dd = dateMatch[3].padStart(2, '0');
-    result.date = `${dateMatch[1]}-${mm}-${dd}`;
+  function parseReceiptText(text) {
+    console.log('OCRで読み取ったテキスト:\n', text);
+    const result = {};
+    const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
+    if (dateMatch) result.date = `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
+    const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
+    if (litersMatch) result.liters = parseFloat(litersMatch[1]);
+    let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
+    if (!amountMatch) amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
+    if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+    return result;
   }
 
-  // 給油量：35.5L、35.50ℓ などに対応（小数点付きの数値を優先）
-  const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
-  if (litersMatch) result.liters = parseFloat(litersMatch[1]);
+  $('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
 
-  // 金額：「合計」「小計」「請求」などのキーワード近くの数字を優先的に採用
-  let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
-  if (!amountMatch) {
-    // キーワードが見つからない場合は「¥」マーク付きの数字をフォールバックとして採用
-    amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
-  }
-  if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
-
-  return result;
-}
-
-// ---------- スキャンボタン押下時の処理 ----------
-$('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
-
-$('fReceiptScan').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const statusEl = $('scanStatus');
-  statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
-  statusEl.classList.remove('hidden');
-  $('scanReceiptBtn').disabled = true;
-  $('scanReceiptBtn').classList.add('opacity-50');
-
-  try {
-    const text = await scanReceipt(file);
-    const parsed = parseReceiptText(text);
-
-    if (parsed.date) $('fDate').value = parsed.date;
-    if (parsed.liters) $('fLiters').value = parsed.liters;
-    if (parsed.amount) $('fPrice').value = parsed.amount;
-
-    if (parsed.date || parsed.liters || parsed.amount) {
-      statusEl.textContent = '✅ 読み取り完了。内容を確認してください';
-    } else {
-      statusEl.textContent = '⚠️ うまく読み取れませんでした。手動で入力してください';
+  $('fReceiptScan').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const statusEl = $('scanStatus');
+    statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
+    statusEl.classList.remove('hidden');
+    $('scanReceiptBtn').disabled = true;
+    $('scanReceiptBtn').classList.add('opacity-50');
+    try {
+      const text = await scanReceipt(file);
+      const parsed = parseReceiptText(text);
+      if (parsed.date) $('fDate').value = parsed.date;
+      if (parsed.liters) $('fLiters').value = parsed.liters;
+      if (parsed.amount) $('fPrice').value = parsed.amount;
+      statusEl.textContent = (parsed.date || parsed.liters || parsed.amount)
+        ? '✅ 読み取り完了。内容を確認・修正してから記録追加してください'
+        : '⚠️ うまく読み取れませんでした。手動で入力してください';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
+    } finally {
+      $('scanReceiptBtn').disabled = false;
+      $('scanReceiptBtn').classList.remove('opacity-50');
+      e.target.value = '';
     }
-  } catch (err) {
-    console.error(err);
-    statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
-  } finally {
-    $('scanReceiptBtn').disabled = false;
-    $('scanReceiptBtn').classList.remove('opacity-50');
-    e.target.value = ''; // 同じ画像を再選択できるようにリセット
-  }
-});
+  });
 
+  // ---------- 給油記録（画像は保存しない・数値のみ） ----------
   $('saveFuelBtn').addEventListener('click', async () => {
     if (!currentCarId) return alert('先に車両を選択してください');
     const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value);
     if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
 
-    // 燃費自動計算（直前の給油記録との差分から）
     const prevSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer', 'desc')));
     let efficiency = null;
     if (!prevSnap.empty) {
@@ -575,17 +548,14 @@ $('fReceiptScan').addEventListener('change', async (e) => {
       if (odo > prevOdo) efficiency = Math.round(((odo - prevOdo) / liters) * 10) / 10;
     }
 
-    let receiptImage = null;
-    const file = $('fReceipt').files[0];
-    if (file) receiptImage = await compressImage(file);
-
     await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
       date, odometer: odo, liters, amount: price, fullTank: $('fFull').checked,
-      efficiency, receiptImage, createdAt: serverTimestamp()
+      efficiency, createdAt: serverTimestamp()
     });
     await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
 
-    $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value=''; $('fReceipt').value='';
+    $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
+    $('scanStatus').classList.add('hidden');
     loadFuel(); loadCars();
   });
 
@@ -593,21 +563,19 @@ $('fReceiptScan').addEventListener('change', async (e) => {
     if (!currentCarId) return;
     const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('date', 'desc')));
     const list = $('fuelList'); list.innerHTML = '';
+    if (snap.empty) {
+      list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>';
+      return;
+    }
     snap.forEach(d => {
       const f = d.data();
       const div = document.createElement('div');
       div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm flex justify-between items-center';
-      const img = f.receiptImage ? `<img src="${f.receiptImage}" class="w-12 h-12 object-cover rounded cursor-pointer receiptThumb">` : '';
       div.innerHTML = `
         <div><p class="font-bold">${f.date}</p>
-        <p class="text-xs text-slate-500">ODO:${f.odometer}km ／ ${f.liters}L ／ ¥${f.amount}${f.efficiency?` ／ 燃費${f.efficiency}km/L`:''}</p></div>
-        <div class="flex items-center gap-2">${img}<button class="delFuelBtn text-red-500 text-xs" data-id="${d.id}">×</button></div>`;
+        <p class="text-xs text-slate-500">ODO:${f.odometer}km ／ ${f.liters}L ／ ¥${f.amount}${f.efficiency?` ／ 燃費${f.efficiency}km/L`:''}${f.fullTank?' ／ 満タン':''}</p></div>
+        <button class="delFuelBtn text-red-500 text-lg leading-none" data-id="${d.id}">×</button>`;
       list.appendChild(div);
-      const thumb = div.querySelector('.receiptThumb');
-      if (thumb) thumb.addEventListener('click', () => {
-        $('imgModalSrc').src = f.receiptImage;
-        $('imgModal').classList.add('active');
-      });
     });
     list.querySelectorAll('.delFuelBtn').forEach(btn => {
       btn.addEventListener('click', async () => {
@@ -622,12 +590,13 @@ $('fReceiptScan').addEventListener('change', async (e) => {
   $('addMaintBtn').addEventListener('click', () => {
     if (!currentCarId) return alert('先に車両を選択してください');
     $('maintDocId').value = '';
-    document.querySelectorAll('#maintModal input, #maintModal select').forEach(i => i.value = '');
+    document.querySelectorAll('#maintModal input:not([type=hidden]), #maintModal select').forEach(i => i.value = '');
     $('maintModal').classList.add('active');
   });
   $('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
 
   async function saveMaint(status) {
+    if (!currentCarId) return alert('先に車両を選択してください');
     const data = {
       status,
       category: $('mCategory').value, shopId: $('mShop').value, staffName: $('mStaff').value,
@@ -655,17 +624,21 @@ $('fReceiptScan').addEventListener('change', async (e) => {
     const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`), orderBy('createdAt', 'desc')));
     const activeList = $('maintListActive'), doneList = $('maintListDone');
     activeList.innerHTML = ''; doneList.innerHTML = '';
+    let activeCount = 0, doneCount = 0;
     snap.forEach(d => {
       const m = d.data();
       const div = document.createElement('div');
       div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
       if (m.status === '完了') {
+        doneCount++;
         div.innerHTML = `
           <p class="font-bold text-green-700">✅ ${m.category}</p>
           <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0} ／ ${m.workDetail||''}</p>
+          ${m.nextScheduleDate?`<p class="text-xs text-blue-600">次回予定: ${m.nextScheduleDate}</p>`:''}
           <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>`;
         doneList.appendChild(div);
       } else {
+        activeCount++;
         const days = daysUntil(m.reservationDate);
         div.innerHTML = `
           <div class="flex justify-between items-start">
@@ -682,6 +655,9 @@ $('fReceiptScan').addEventListener('change', async (e) => {
         activeList.appendChild(div);
       }
     });
+    if (activeCount === 0) activeList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
+    if (doneCount === 0) doneList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
+
     document.querySelectorAll('.editMaintBtn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
