@@ -26,12 +26,12 @@ import {
    必ず置き換えてください。
    ----------------------------------------------------------- */
 const firebaseConfig = {
-  apiKey: "ここに自分のAPIキー",
-  authDomain: "ここに自分のauthDomain",
-  projectId: "ここに自分のprojectId",
-  storageBucket: "ここに自分のstorageBucket",
-  messagingSenderId: "ここに自分のmessagingSenderId",
-  appId: "ここに自分のappId"
+  apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
+  authDomain: "my-car-manager-daab9.firebaseapp.com",
+  projectId: "my-car-manager-daab9",
+  storageBucket: "my-car-manager-daab9.firebasestorage.app",
+  messagingSenderId: "287236190745",
+  appId: "1:287236190745:web:caa18d35701205aa0db088"
 };
 
 /* ---------- Firebase 初期化 ---------- */
