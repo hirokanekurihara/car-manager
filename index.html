@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>マイカー管理アプリ</title>
+<link rel="icon" href="data:,">
+
+<!-- ===================== iOS ホーム画面追加用メタタグ ===================== -->
+<!-- ホームスクリーンに追加した際にアプリらしい見た目にするための設定 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="マイカー管理">
+<meta name="theme-color" content="#1d4ed8">
+
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: { sans: ['Noto Sans JP', 'sans-serif'] },
+        colors: {
+          brand: {
+            50: '#eff6ff', 100:'#dbeafe', 200:'#bfdbfe', 300:'#93c5fd',
+            400:'#60a5fa', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8',
+            800:'#1e40af', 900:'#1e3a8a'
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Noto Sans JP', sans-serif; }
+  .tab-btn.active {
+    background-color: #2563eb;
+    color: #fff;
+  }
+  .detail-tab-btn.active {
+    background-color: #2563eb;
+    color: #fff;
+  }
+  ::-webkit-scrollbar { height: 6px; width: 6px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .modal-overlay { background: rgba(15, 23, 42, 0.55); }
+  .fade-in { animation: fadeIn .15s ease-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
+
+<!-- ヘッダー -->
+<header class="bg-brand-700 text-white shadow sticky top-0 z-30">
+  <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <span class="text-2xl">🚗</span>
+      <h1 class="text-lg sm:text-xl font-bold tracking-wide">マイカー管理</h1>
+    </div>
+
+    <div class="flex items-center gap-2 flex-wrap">
+      <button id="openCarModalBtn" disabled class="bg-white/15 hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm font-medium px-3 py-1.5 rounded-lg border border-white/30">
+        ＋ 車両を追加
+      </button>
+
+      <!-- 未ログイン時：Googleでログインボタン -->
+      <button id="loginBtn" class="bg-white text-brand-700 hover:bg-brand-50 transition text-sm font-semibold px-3 py-1.5 rounded-lg">
+        🔑 Googleでログイン
+      </button>
+
+      <!-- ログイン中：ユーザー情報＋ログアウトボタン -->
+      <div id="userInfo" class="hidden items-center gap-2">
+        <img id="userAvatar" src="" alt="ユーザーアイコン" class="w-7 h-7 rounded-full border border-white/40 object-cover bg-white/20">
+        <span id="userName" class="text-sm font-medium max-w-[120px] truncate"></span>
+        <button id="logoutBtn" class="bg-white/15 hover:bg-white/25 transition text-xs font-medium px-2.5 py-1.5 rounded-lg border border-white/30">ログアウト</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-3 sm:px-4 py-4 space-y-4">
+
+  <!-- 未ログイン時のガイド表示 -->
+  <section id="authGate" class="bg-white rounded-xl shadow-sm p-10 text-center text-slate-500 space-y-3">
+    <p class="text-4xl">🔒</p>
+    <p class="font-semibold text-lg text-slate-700">ログインしてください</p>
+    <p class="text-sm leading-relaxed">
+      車両情報はGoogleアカウントに紐づけてクラウド（Cloud Firestore）に保存されます。<br>
+      同じGoogleアカウントで別のデバイスからログインすれば、同じデータを確認・編集できます。
+    </p>
+  </section>
+
+  <!-- ログイン中のみ表示するメインコンテンツ -->
+  <div id="appContent" class="hidden space-y-4">
+
+    <!-- 対象車両セレクタ -->
+    <section id="carSelectorBox" class="bg-white rounded-xl shadow-sm p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+      <label for="carFilterSelect" class="text-sm font-semibold text-slate-500 whitespace-nowrap">対象車両</label>
+      <select id="carFilterSelect" class="w-full sm:w-auto flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></select>
+      <span id="carCountLabel" class="text-xs text-slate-400 whitespace-nowrap">登録車両数: 0 / 5台</span>
+    </section>
+
+    <!-- タブ -->
+    <nav class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-sm sm:text-base font-semibold">
+      <button data-tab="cars" class="tab-btn active flex-1 py-2 rounded-lg transition">🚘 車両一覧</button>
+      <button data-tab="fuel" class="tab-btn flex-1 py-2 rounded-lg transition">⛽ 給油記録</button>
+      <button data-tab="maintenance" class="tab-btn flex-1 py-2 rounded-lg transition">🔧 メンテナンス</button>
+    </nav>
+
+    <!-- ===================== 車両一覧タブ ===================== -->
+    <section id="tab-cars" class="space-y-3">
+      <div id="carListEmpty" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
+        登録された車両がありません。「＋ 車両を追加」から登録してください。
+      </div>
+      <div id="carList" class="grid sm:grid-cols-2 gap-3"></div>
+    </section>
+
+    <!-- ===================== 給油記録タブ ===================== -->
+    <section id="tab-fuel" class="hidden space-y-3">
+      <div id="fuelNoCar" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
+        先に車両を登録・選択してください。
+      </div>
+      <div id="fuelContent" class="hidden space-y-3">
+        <form id="fuelForm" class="bg-white rounded-xl shadow-sm p-4 grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">日付</label>
+            <input type="date" id="fuelDate" required class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">走行距離(km)</label>
+            <input type="number" id="fuelOdo" min="0" step="1" required placeholder="例: 15230" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">給油量(L)</label>
+            <input type="number" id="fuelLiters" min="0" step="0.01" required placeholder="例: 35.5" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">金額(円)</label>
+            <input type="number" id="fuelPrice" min="0" step="1" required placeholder="例: 5500" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1 flex items-center gap-2 pb-2">
+            <input type="checkbox" id="fuelFull" checked class="w-4 h-4 accent-brand-600">
+            <label for="fuelFull" class="text-sm font-medium text-slate-600">満タン</label>
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">＋ 記録追加</button>
+          </div>
+        </form>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500">
+                <tr>
+                  <th class="px-3 py-2 text-left whitespace-nowrap">日付</th>
+                  <th class="px-3 py-2 text-right whitespace-nowrap">ODO(km)</th>
+                  <th class="px-3 py-2 text-right whitespace-nowrap">給油量(L)</th>
+                  <th class="px-3 py-2 text-right whitespace-nowrap">金額(円)</th>
+                  <th class="px-3 py-2 text-center whitespace-nowrap">満タン</th>
+                  <th class="px-3 py-2 text-right whitespace-nowrap">燃費(km/L)</th>
+                  <th class="px-3 py-2 text-center whitespace-nowrap">操作</th>
+                </tr>
+              </thead>
+              <tbody id="fuelTableBody"></tbody>
+            </table>
+          </div>
+          <div id="fuelEmptyRow" class="hidden text-center text-slate-400 py-8">給油記録がまだありません</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== メンテナンス記録タブ ===================== -->
+    <section id="tab-maintenance" class="hidden space-y-3">
+      <div id="maintNoCar" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
+        先に車両を登録・選択してください。
+      </div>
+      <div id="maintContent" class="hidden space-y-3">
+        <form id="maintForm" class="bg-white rounded-xl shadow-sm p-4 grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">日付</label>
+            <input type="date" id="maintDate" required class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">走行距離(km)</label>
+            <input type="number" id="maintOdo" min="0" step="1" required placeholder="例: 15300" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">作業カテゴリ</label>
+            <select id="maintCategory" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+              <option value="オイル交換">オイル交換</option>
+              <option value="タイヤ交換">タイヤ交換</option>
+              <option value="車検・点検">車検・点検</option>
+              <option value="バッテリー交換">バッテリー交換</option>
+              <option value="洗車・清掃">洗車・清掃</option>
+              <option value="消耗品交換">消耗品交換</option>
+              <option value="その他">その他（自由入力）</option>
+            </select>
+          </div>
+          <div id="maintCategoryOtherWrap" class="col-span-1 hidden">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">カテゴリ（自由入力）</label>
+            <input type="text" id="maintCategoryOther" placeholder="例: エアコンガス補充" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">費用(円)</label>
+            <input type="number" id="maintCost" min="0" step="1" placeholder="例: 8000" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">メモ</label>
+            <input type="text" id="maintMemo" placeholder="任意メモ" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-2 sm:col-span-1">
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">＋ 記録追加</button>
+          </div>
+        </form>
+
+        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-slate-50 text-slate-500">
+                <tr>
+                  <th class="px-3 py-2 text-left whitespace-nowrap">日付</th>
+                  <th class="px-3 py-2 text-right whitespace-nowrap">ODO(km)</th>
+                  <th class="px-3 py-2 text-left whitespace-nowrap">カテゴリ</th>
+                  <th class="px-3 py-2 text-right whitespace-nowrap">費用(円)</th>
+                  <th class="px-3 py-2 text-left whitespace-nowrap">メモ</th>
+                  <th class="px-3 py-2 text-center whitespace-nowrap">操作</th>
+                </tr>
+              </thead>
+              <tbody id="maintTableBody"></tbody>
+            </table>
+          </div>
+          <div id="maintEmptyRow" class="hidden text-center text-slate-400 py-8">メンテナンス記録がまだありません</div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /#appContent -->
+
+</main>
+
+<!-- ===================== 車両登録／編集モーダル（基本情報） ===================== -->
+<div id="carModal" class="fixed inset-0 z-40 hidden items-center justify-center modal-overlay p-3">
+  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+      <h2 id="carModalTitle" class="font-bold text-lg text-slate-800">車両を追加</h2>
+      <button id="closeCarModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form id="carForm" class="p-5 grid grid-cols-2 gap-3">
+      <input type="hidden" id="carId">
+      <div class="col-span-2">
+        <label class="block text-xs font-semibold text-slate-500 mb-1">ニックネーム <span class="text-red-500">*</span></label>
+        <input type="text" id="carNickname" required placeholder="例: マイロードスター" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">メーカー</label>
+        <input type="text" id="carMaker" placeholder="例: マツダ" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">車種</label>
+        <input type="text" id="carModel" placeholder="例: ロードスター" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">年式</label>
+        <input type="number" id="carYear" placeholder="例: 2020" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold text-slate-500 mb-1">ナンバー</label>
+        <input type="text" id="carPlate" placeholder="例: 品川 300 あ 12-34" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <div class="col-span-2">
+        <label class="block text-xs font-semibold text-slate-500 mb-1">現在の走行距離(km)</label>
+        <input type="number" id="carOdo" min="0" step="1" placeholder="例: 15230" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <div class="col-span-2">
+        <label class="block text-xs font-semibold text-slate-500 mb-1">車検満了日</label>
+        <input type="date" id="carShaken" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+      </div>
+      <p class="col-span-2 text-xs text-slate-400 -mt-1">
+        ※ 自賠責保険・任意保険の詳細情報（保険会社・満了日・連絡先など）は、
+        保存後に車両カードの「詳細」→「保険情報」タブから登録できます。
+      </p>
+      <div class="col-span-2 flex gap-2 mt-2">
+        <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">保存する</button>
+        <button type="button" id="cancelCarModalBtn" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition">キャンセル</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== 車両詳細モーダル（基本情報／保険情報） ===================== -->
+<div id="carDetailModal" class="fixed inset-0 z-40 hidden items-center justify-center modal-overlay p-3">
+  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+      <h2 id="carDetailTitle" class="font-bold text-lg text-slate-800">車両詳細</h2>
+      <button id="closeCarDetailModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    </div>
+
+    <!-- 詳細内サブタブ -->
+    <div class="px-5 pt-3">
+      <nav class="bg-slate-100 rounded-lg p-1 flex gap-1 text-sm font-semibold">
+        <button data-detail-tab="basic" class="detail-tab-btn active flex-1 py-1.5 rounded-lg transition">基本情報</button>
+        <button data-detail-tab="insurance" class="detail-tab-btn flex-1 py-1.5 rounded-lg transition">保険情報</button>
+      </nav>
+    </div>
+
+    <!-- 基本情報パネル -->
+    <div id="detailBasicPanel" class="p-5 space-y-3">
+      <dl class="grid grid-cols-2 gap-3 text-sm">
+        <div><dt class="text-slate-400 text-xs">メーカー・車種</dt><dd id="detailMakerModel" class="font-medium text-slate-700">-</dd></div>
+        <div><dt class="text-slate-400 text-xs">年式</dt><dd id="detailYear" class="font-medium text-slate-700">-</dd></div>
+        <div><dt class="text-slate-400 text-xs">ナンバー</dt><dd id="detailPlate" class="font-medium text-slate-700">-</dd></div>
+        <div><dt class="text-slate-400 text-xs">現在の走行距離</dt><dd id="detailOdo" class="font-medium text-slate-700">-</dd></div>
+      </dl>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div id="detailShakenBadge" class="rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500"></div>
+        <div id="detailJibaisekiBadge" class="rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500"></div>
+        <div id="detailInsuranceBadge" class="rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500"></div>
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button id="detailEditBtn" type="button" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">基本情報を編集</button>
+        <button id="detailDeleteBtn" type="button" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-lg text-sm transition">車両を削除</button>
+      </div>
+    </div>
+
+    <!-- 保険情報パネル -->
+    <div id="detailInsurancePanel" class="p-5 space-y-6 hidden">
+      <!-- 自賠責保険 -->
+      <div class="space-y-2">
+        <h3 class="font-bold text-slate-700 text-sm">🛡️ 自賠責保険</h3>
+        <p id="jibaisekiSummary" class="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">未登録</p>
+        <form id="jibaisekiForm" class="grid grid-cols-2 gap-2">
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">保険会社名</label>
+            <input type="text" id="jibaisekiCompany" placeholder="例: ○○損害保険" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">証券番号</label>
+            <input type="text" id="jibaisekiPolicyNo" placeholder="例: 1234-5678" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">満了日</label>
+            <input type="date" id="jibaisekiExpiry" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-2">
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">自賠責情報を保存</button>
+          </div>
+        </form>
+      </div>
+
+      <hr class="border-slate-100">
+
+      <!-- 任意保険 -->
+      <div class="space-y-2">
+        <h3 class="font-bold text-slate-700 text-sm">🛡️ 任意保険</h3>
+        <div id="viSummary" class="text-xs text-slate-500 bg-slate-50 rounded-lg p-2 space-y-0.5">未登録</div>
+        <form id="voluntaryForm" class="grid grid-cols-2 gap-2">
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">保険会社名</label>
+            <input type="text" id="viCompany" placeholder="例: ○○海上" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">証券番号</label>
+            <input type="text" id="viPolicyNo" placeholder="例: 9876-5432" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">担当者名</label>
+            <input type="text" id="viAgentName" placeholder="例: 山田太郎" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">担当者電話番号</label>
+            <input type="tel" id="viAgentPhone" placeholder="例: 090-1234-5678" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">代理店名</label>
+            <input type="text" id="viAgencyName" placeholder="例: ○○代理店" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">代理店電話番号</label>
+            <input type="tel" id="viAgencyPhone" placeholder="例: 03-1234-5678" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-2">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">補償内容メモ</label>
+            <textarea id="viMemo" rows="2" placeholder="例: 対人・対物無制限、車両保険あり" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></textarea>
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">満了日</label>
+            <input type="date" id="viExpiry" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-1">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">年間保険料(円)</label>
+            <input type="number" id="viPremium" min="0" step="1" placeholder="例: 65000" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
+          </div>
+          <div class="col-span-2">
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">任意保険情報を保存</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- トースト通知 -->
+<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-4 py-2 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity z-50"></div>
+
+<!-- Firebase v9以降のモジュール版SDKを使用（app.js内でimportしています） -->
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
