@@ -2,591 +2,706 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>マイカー管理アプリ</title>
-<link rel="icon" href="data:,">
-
-<!-- ===================== iOS ホーム画面追加用メタタグ ===================== -->
-<!-- ホームスクリーンに追加した際にアプリらしい見た目にするための設定 -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="マイカー管理">
-<meta name="theme-color" content="#1d4ed8">
-
+<title>マイカー管理アプリ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<!-- Chart.js（費用分析タブのグラフ表示用） -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        fontFamily: { sans: ['Noto Sans JP', 'sans-serif'] },
-        colors: {
-          brand: {
-            50: '#eff6ff', 100:'#dbeafe', 200:'#bfdbfe', 300:'#93c5fd',
-            400:'#60a5fa', 500:'#3b82f6', 600:'#2563eb', 700:'#1d4ed8',
-            800:'#1e40af', 900:'#1e3a8a'
-          }
-        }
-      }
-    }
-  }
-</script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
-  html { scroll-behavior: smooth; }
   body { font-family: 'Noto Sans JP', sans-serif; }
-  .tab-btn.active {
-    background-color: #2563eb;
-    color: #fff;
-  }
-  .detail-tab-btn.active {
-    background-color: #2563eb;
-    color: #fff;
-  }
-  .maint-tab-btn.active {
-    background-color: #2563eb;
-    color: #fff;
-  }
-  ::-webkit-scrollbar { height: 6px; width: 6px; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-  .modal-overlay { background: rgba(15, 23, 42, 0.55); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .tab-btn.active { background-color: #2563eb; color: #fff; }
+  .modal { display: none; }
+  .modal.active { display: flex; }
   .fade-in { animation: fadeIn .15s ease-out; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-  .receipt-thumb { width: 44px; height: 44px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 1px solid #e2e8f0; }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
 
-<!-- ヘッダー -->
-<header class="bg-brand-700 text-white shadow sticky top-0 z-30">
-  <div class="max-w-5xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-    <div class="flex items-center gap-2">
-      <span class="text-2xl">🚗</span>
-      <h1 class="text-lg sm:text-xl font-bold tracking-wide">マイカー管理</h1>
-    </div>
-
-    <div class="flex items-center gap-2 flex-wrap">
-      <button id="openCarModalBtn" disabled class="bg-white/15 hover:bg-white/25 disabled:opacity-40 disabled:cursor-not-allowed transition text-sm font-medium px-3 py-1.5 rounded-lg border border-white/30">
-        ＋ 車両を追加
-      </button>
-
-      <!-- 未ログイン時：Googleでログインボタン -->
-      <button id="loginBtn" class="bg-white text-brand-700 hover:bg-brand-50 transition text-sm font-semibold px-3 py-1.5 rounded-lg">
-        🔑 Googleでログイン
-      </button>
-
-      <!-- ログイン中：ユーザー情報＋ログアウトボタン -->
-      <div id="userInfo" class="hidden items-center gap-2">
-        <img id="userAvatar" src="" alt="ユーザーアイコン" class="w-7 h-7 rounded-full border border-white/40 object-cover bg-white/20">
-        <span id="userName" class="text-sm font-medium max-w-[120px] truncate"></span>
-        <button id="logoutBtn" class="bg-white/15 hover:bg-white/25 transition text-xs font-medium px-2.5 py-1.5 rounded-lg border border-white/30">ログアウト</button>
-      </div>
-    </div>
+<header class="bg-blue-700 text-white shadow sticky top-0 z-30 px-4 py-3 flex justify-between items-center">
+  <h1 class="text-lg sm:text-xl font-bold">🚗 マイカー管理</h1>
+  <div>
+    <button id="loginBtn" class="bg-white text-blue-700 px-3 py-1.5 rounded-lg font-bold text-sm hidden">🔑 Googleでログイン</button>
+    <button id="logoutBtn" class="bg-blue-900 text-white px-3 py-1.5 rounded-lg font-bold text-sm hidden">ログアウト</button>
   </div>
 </header>
 
-<main class="max-w-5xl mx-auto px-3 sm:px-4 py-4 space-y-4">
+<div id="unauthScreen" class="p-8 text-center mt-10 max-w-md mx-auto bg-white rounded-xl shadow-sm">
+  <p class="text-4xl mb-3">🔒</p>
+  <p class="font-bold mb-2">ログインしてください</p>
+  <p class="text-sm text-slate-500">車両情報はGoogleアカウントに紐づけてクラウド（Cloud Firestore）に保存されます。同じアカウントで別デバイスからログインすれば同じデータを確認・編集できます。</p>
+</div>
 
-  <!-- 未ログイン時のガイド表示 -->
-  <section id="authGate" class="bg-white rounded-xl shadow-sm p-10 text-center text-slate-500 space-y-3">
-    <p class="text-4xl">🔒</p>
-    <p class="font-semibold text-lg text-slate-700">ログインしてください</p>
-    <p class="text-sm leading-relaxed">
-      車両情報はGoogleアカウントに紐づけてクラウド（Cloud Firestore）に保存されます。<br>
-      同じGoogleアカウントで別のデバイスからログインすれば、同じデータを確認・編集できます。
-    </p>
+<main id="authScreen" class="max-w-5xl mx-auto px-3 sm:px-4 py-4 hidden space-y-4">
+
+  <nav class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs sm:text-sm font-semibold">
+    <button class="tab-btn active flex-1 py-2 rounded-lg" data-target="tab-cars">🚘 車両</button>
+    <button class="tab-btn flex-1 py-2 rounded-lg" data-target="tab-fuel">⛽ 給油</button>
+    <button class="tab-btn flex-1 py-2 rounded-lg" data-target="tab-maint">🔧 メンテ</button>
+    <button class="tab-btn flex-1 py-2 rounded-lg" data-target="tab-settings">⚙️ 設定</button>
+  </nav>
+
+  <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-2">
+    <label class="text-sm font-bold text-slate-600 whitespace-nowrap">対象車両</label>
+    <select id="globalCarSelect" class="flex-1 border border-slate-300 p-2 rounded-lg text-sm"></select>
+  </div>
+
+  <!-- 車両タブ -->
+  <section id="tab-cars" class="tab-content active space-y-3">
+    <button id="addCarBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm">＋ 車両を追加（最大5台）</button>
+    <div id="carList" class="grid sm:grid-cols-2 gap-3"></div>
   </section>
 
-  <!-- ログイン中のみ表示するメインコンテンツ -->
-  <div id="appContent" class="hidden space-y-4">
-
-    <!-- 対象車両セレクタ -->
-    <section id="carSelectorBox" class="bg-white rounded-xl shadow-sm p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-      <label for="carFilterSelect" class="text-sm font-semibold text-slate-500 whitespace-nowrap">対象車両</label>
-      <select id="carFilterSelect" class="w-full sm:w-auto flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></select>
-      <span id="carCountLabel" class="text-xs text-slate-400 whitespace-nowrap">登録車両数: 0 / 5台</span>
-    </section>
-
-    <!-- タブ -->
-    <nav class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-sm sm:text-base font-semibold overflow-x-auto">
-      <button data-tab="cars" class="tab-btn active flex-1 py-2 rounded-lg transition whitespace-nowrap">🚘 車両一覧</button>
-      <button data-tab="fuel" class="tab-btn flex-1 py-2 rounded-lg transition whitespace-nowrap">⛽ 給油記録</button>
-      <button data-tab="maintenance" class="tab-btn flex-1 py-2 rounded-lg transition whitespace-nowrap">🔧 メンテナンス</button>
-      <button data-tab="settings" class="tab-btn flex-1 py-2 rounded-lg transition whitespace-nowrap">⚙️ 設定</button>
-    </nav>
-
-    <!-- ===================== 車両一覧タブ ===================== -->
-    <section id="tab-cars" class="space-y-3">
-      <div id="carListEmpty" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
-        登録された車両がありません。「＋ 車両を追加」から登録してください。
+  <!-- 給油タブ -->
+  <section id="tab-fuel" class="tab-content space-y-3">
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-3 text-slate-700">＋ 給油記録を追加</h3>
+      <div class="grid grid-cols-2 gap-2 text-sm">
+        <input type="date" id="fDate" class="border border-slate-300 p-2 rounded-lg col-span-2">
+        <input type="number" id="fOdo" placeholder="走行距離(km)" class="border border-slate-300 p-2 rounded-lg">
+        <input type="number" id="fLiters" placeholder="給油量(L)" step="0.01" class="border border-slate-300 p-2 rounded-lg">
+        <input type="number" id="fPrice" placeholder="金額(円)" class="border border-slate-300 p-2 rounded-lg">
+        <label class="flex items-center gap-1 border border-slate-300 p-2 rounded-lg bg-slate-50 text-xs">
+          <input type="checkbox" id="fFull" checked> 満タン
+        </label>
+        <div class="col-span-2 border border-slate-300 p-2 rounded-lg bg-slate-50 space-y-1">
+  <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 text-white py-2 rounded-lg font-bold text-xs">
+    🧾 レシートをスキャンして自動入力
+  </button>
+  <input type="file" id="fReceiptScan" accept="image/*" capture="environment" class="hidden">
+  <p id="scanStatus" class="text-center text-xs text-slate-500 hidden"></p>
+</div>
+        <button id="saveFuelBtn" class="col-span-2 bg-blue-600 text-white py-2 rounded-lg font-bold">＋ 記録追加</button>
       </div>
-      <div id="carList" class="grid sm:grid-cols-2 gap-3"></div>
-    </section>
+    </div>
+    <div id="fuelList" class="space-y-2"></div>
+  </section>
 
-    <!-- ===================== 給油記録タブ ===================== -->
-    <section id="tab-fuel" class="hidden space-y-3">
-      <div id="fuelNoCar" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
-        先に車両を登録・選択してください。
+  <!-- メンテタブ -->
+  <section id="tab-maint" class="tab-content space-y-3">
+    <div class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs font-semibold">
+      <button class="maintSub active flex-1 py-1.5 rounded-lg" data-status="active">予約中・進行中</button>
+      <button class="maintSub flex-1 py-1.5 rounded-lg" data-status="done">完了済み</button>
+    </div>
+    <button id="addMaintBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm">＋ 新規予約・記録</button>
+    <div id="maintListActive" class="space-y-2"></div>
+    <div id="maintListDone" class="space-y-2 hidden"></div>
+  </section>
+
+  <!-- 設定タブ -->
+  <section id="tab-settings" class="tab-content space-y-3">
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-2 text-slate-700">作業カテゴリの管理</h3>
+      <div class="flex gap-2 mb-3">
+        <input type="text" id="newCategoryName" placeholder="新しいカテゴリ名" class="border border-slate-300 p-2 rounded-lg flex-1 text-sm">
+        <button id="addCategoryBtn" class="bg-blue-600 text-white px-4 rounded-lg font-bold text-sm">追加</button>
       </div>
-      <div id="fuelContent" class="hidden space-y-3">
-        <form id="fuelForm" class="bg-white rounded-xl shadow-sm p-4 grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">日付</label>
-            <input type="date" id="fuelDate" required class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">走行距離(km)</label>
-            <input type="number" id="fuelOdo" min="0" step="1" required placeholder="例: 15230" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">給油量(L)</label>
-            <input type="number" id="fuelLiters" min="0" step="0.01" required placeholder="例: 35.5" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">金額(円)</label>
-            <input type="number" id="fuelPrice" min="0" step="1" required placeholder="例: 5500" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">給油店舗</label>
-            <select id="fuelShop" class="w-full border border-slate-300 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-              <option value="">未選択</option>
-            </select>
-          </div>
-          <div class="col-span-1 flex items-center gap-2 pb-2">
-            <input type="checkbox" id="fuelFull" checked class="w-4 h-4 accent-brand-600">
-            <label for="fuelFull" class="text-sm font-medium text-slate-600">満タン</label>
-          </div>
-
-          <div class="col-span-2 sm:col-span-3 flex items-center gap-2">
-            <input type="file" id="fuelReceiptInput" accept="image/*" capture="environment" class="hidden">
-            <button type="button" id="fuelReceiptBtn" class="text-sm font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-2 rounded-lg transition">📷レシートを撮影</button>
-            <img id="fuelReceiptPreview" class="hidden w-12 h-12 object-cover rounded-lg border border-slate-200" alt="レシート画像プレビュー">
-            <button type="button" id="fuelReceiptClearBtn" class="hidden text-xs text-red-500 hover:underline">削除</button>
-          </div>
-          <div class="col-span-2 sm:col-span-3">
-            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">＋ 記録追加</button>
-          </div>
-        </form>
-
-        <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-slate-50 text-slate-500">
-                <tr>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">日付</th>
-                  <th class="px-3 py-2 text-right whitespace-nowrap">ODO(km)</th>
-                  <th class="px-3 py-2 text-right whitespace-nowrap">給油量(L)</th>
-                  <th class="px-3 py-2 text-right whitespace-nowrap">金額(円)</th>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">店舗</th>
-                  <th class="px-3 py-2 text-center whitespace-nowrap">満タン</th>
-                  <th class="px-3 py-2 text-right whitespace-nowrap">燃費(km/L)</th>
-                  <th class="px-3 py-2 text-center whitespace-nowrap">レシート</th>
-                  <th class="px-3 py-2 text-center whitespace-nowrap">操作</th>
-                </tr>
-              </thead>
-              <tbody id="fuelTableBody"></tbody>
-            </table>
-          </div>
-          <div id="fuelEmptyRow" class="hidden text-center text-slate-400 py-8">給油記録がまだありません</div>
-        </div>
+      <ul id="categoryList" class="text-sm divide-y divide-slate-100"></ul>
+    </div>
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-2 text-slate-700">店舗マスタの管理</h3>
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <input type="text" id="newShopName" placeholder="店舗名" class="border border-slate-300 p-2 rounded-lg text-sm">
+        <input type="tel" id="newShopTel" placeholder="電話番号" class="border border-slate-300 p-2 rounded-lg text-sm">
+        <button id="addShopBtn" class="col-span-2 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm">店舗を追加</button>
       </div>
-    </section>
-
-    <!-- ===================== メンテナンス記録タブ ===================== -->
-    <section id="tab-maintenance" class="hidden space-y-3">
-      <div id="maintNoCar" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
-        先に車両を登録・選択してください。
-      </div>
-      <div id="maintContent" class="hidden space-y-3">
-
-        <div class="bg-white rounded-xl shadow-sm p-3 flex flex-wrap items-center gap-2">
-          <nav class="bg-slate-100 rounded-lg p-1 flex gap-1 text-sm font-semibold flex-1">
-            <button data-maint-tab="active" class="maint-tab-btn active flex-1 py-1.5 rounded-lg transition">予約中・進行中</button>
-            <button data-maint-tab="done" class="maint-tab-btn flex-1 py-1.5 rounded-lg transition">完了済み</button>
-          </nav>
-          <button id="openMaintReserveBtn" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-3 py-2 rounded-lg transition whitespace-nowrap">＋新規予約</button>
-        </div>
-
-        <!-- 予約中・進行中パネル -->
-        <div id="maintActivePanel" class="space-y-2">
-          <div id="maintActiveEmpty" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
-            予約中・進行中のメンテナンスはありません
-          </div>
-          <div id="maintActiveList" class="grid sm:grid-cols-2 gap-3"></div>
-        </div>
-
-        <!-- 完了済みパネル -->
-        <div id="maintDonePanel" class="hidden bg-white rounded-xl shadow-sm overflow-hidden">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead class="bg-slate-50 text-slate-500">
-                <tr>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">実施日</th>
-                  <th class="px-3 py-2 text-right whitespace-nowrap">ODO(km)</th>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">カテゴリ</th>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">店舗</th>
-                  <th class="px-3 py-2 text-right whitespace-nowrap">費用(円)</th>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">作業内容</th>
-                  <th class="px-3 py-2 text-left whitespace-nowrap">次回予定日</th>
-                  <th class="px-3 py-2 text-center whitespace-nowrap">操作</th>
-                </tr>
-              </thead>
-              <tbody id="maintDoneTableBody"></tbody>
-            </table>
-          </div>
-          <div id="maintDoneEmpty" class="hidden text-center text-slate-400 py-8">完了済みのメンテナンス記録がまだありません</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ===================== 設定タブ ===================== -->
-    <section id="tab-settings" class="hidden space-y-3">
-      <div id="settingsNoCar" class="hidden bg-white rounded-xl shadow-sm p-8 text-center text-slate-400">
-        先に車両を登録・選択してください。
-      </div>
-      <div id="settingsContent" class="space-y-4">
-
-        <!-- 作業カテゴリ管理 -->
-        <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-          <h3 class="font-bold text-slate-700">🗂️ 作業カテゴリ管理</h3>
-          <form id="categoryForm" class="flex flex-wrap gap-2 items-end">
-            <input type="hidden" id="categoryId">
-            <div class="flex-1 min-w-[160px]">
-              <label class="block text-xs font-semibold text-slate-500 mb-1">カテゴリ名</label>
-              <input type="text" id="categoryName" required placeholder="例: オイル交換" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-            </div>
-            <button type="submit" id="categorySubmitBtn" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition">追加</button>
-            <button type="button" id="categoryCancelBtn" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm px-4 py-2 rounded-lg transition">キャンセル</button>
-          </form>
-          <ul id="categoryList" class="divide-y divide-slate-100 text-sm"></ul>
-          <p id="categoryEmpty" class="hidden text-center text-slate-400 py-4 text-sm">カテゴリが登録されていません</p>
-        </div>
-
-        <!-- 店舗マスタ管理 -->
-        <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-          <h3 class="font-bold text-slate-700">🏬 店舗マスタ管理</h3>
-          <form id="shopForm" class="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-            <input type="hidden" id="shopId">
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">店舗名 <span class="text-red-500">*</span></label>
-              <input type="text" id="shopName" required placeholder="例: ○○モータース" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">電話番号</label>
-              <input type="tel" id="shopPhone" placeholder="例: 03-1234-5678" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-500 mb-1">メモ</label>
-              <input type="text" id="shopMemo" placeholder="任意メモ" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-            </div>
-            <div class="sm:col-span-3 flex gap-2">
-              <button type="submit" id="shopSubmitBtn" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold text-sm px-4 py-2 rounded-lg transition">追加</button>
-              <button type="button" id="shopCancelBtn" class="hidden flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm px-4 py-2 rounded-lg transition">キャンセル</button>
-            </div>
-          </form>
-          <ul id="shopList" class="divide-y divide-slate-100 text-sm"></ul>
-          <p id="shopEmpty" class="hidden text-center text-slate-400 py-4 text-sm">店舗が登録されていません</p>
-        </div>
-
-        <!-- CSVエクスポート -->
-        <div class="bg-white rounded-xl shadow-sm p-4 space-y-3">
-          <h3 class="font-bold text-slate-700">📤 CSVエクスポート</h3>
-          <p class="text-xs text-slate-500">現在選択中の車両の記録をCSVファイルとしてダウンロードします。</p>
-          <div class="flex flex-wrap gap-2">
-            <button id="exportFuelCsvBtn" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm px-4 py-2 rounded-lg transition">⛽ 給油記録をCSV出力</button>
-            <button id="exportMaintCsvBtn" type="button" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm px-4 py-2 rounded-lg transition">🔧 メンテナンス記録をCSV出力</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-  </div><!-- /#appContent -->
-
+      <ul id="shopList" class="text-sm divide-y divide-slate-100"></ul>
+    </div>
+  </section>
 </main>
 
-<!-- ===================== 車両登録／編集モーダル（基本情報） ===================== -->
-<div id="carModal" class="fixed inset-0 z-40 hidden items-center justify-center modal-overlay p-3">
-  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-      <h2 id="carModalTitle" class="font-bold text-lg text-slate-800">車両を追加</h2>
-      <button id="closeCarModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+<!-- 車両追加/編集モーダル -->
+<div id="carModal" class="modal fixed inset-0 z-40 bg-black/50 items-center justify-center p-3">
+  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3">
+    <div class="flex justify-between items-center">
+      <h2 class="font-bold text-lg">車両情報</h2>
+      <button id="closeCarModal" class="text-2xl text-slate-400">&times;</button>
     </div>
-    <form id="carForm" class="p-5 grid grid-cols-2 gap-3">
-      <input type="hidden" id="carId">
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">ニックネーム <span class="text-red-500">*</span></label>
-        <input type="text" id="carNickname" required placeholder="例: マイロードスター" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">メーカー</label>
-        <input type="text" id="carMaker" placeholder="例: マツダ" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">車種</label>
-        <input type="text" id="carModel" placeholder="例: ロードスター" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">年式</label>
-        <input type="number" id="carYear" placeholder="例: 2020" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div>
-        <label class="block text-xs font-semibold text-slate-500 mb-1">ナンバー</label>
-        <input type="text" id="carPlate" placeholder="例: 品川 300 あ 12-34" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">現在の走行距離(km)</label>
-        <input type="number" id="carOdo" min="0" step="1" placeholder="例: 15230" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">車検満了日</label>
-        <input type="date" id="carShaken" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <p class="col-span-2 text-xs text-slate-400 -mt-1">
-        ※ 自賠責保険・任意保険の詳細情報（保険会社・満了日・連絡先など）は、
-        保存後に車両カードの「詳細」→「保険情報」タブから登録できます。
-      </p>
-      <div class="col-span-2 flex gap-2 mt-2">
-        <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">保存する</button>
-        <button type="button" id="cancelCarModalBtn" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition">キャンセル</button>
-      </div>
-    </form>
+    <input type="hidden" id="carDocId">
+    <div class="grid grid-cols-2 gap-2 text-sm">
+      <input type="text" id="cNickname" placeholder="ニックネーム*" class="border p-2 rounded-lg col-span-2">
+      <input type="text" id="cMaker" placeholder="メーカー" class="border p-2 rounded-lg">
+      <input type="text" id="cModel" placeholder="車種" class="border p-2 rounded-lg">
+      <input type="number" id="cYear" placeholder="年式" class="border p-2 rounded-lg">
+      <input type="text" id="cPlate" placeholder="ナンバー" class="border p-2 rounded-lg">
+      <input type="number" id="cOdo" placeholder="現在の走行距離(km)" class="border p-2 rounded-lg col-span-2">
+      <div><label class="text-xs text-slate-500">車検満了日</label><input type="date" id="cShaken" class="border p-2 rounded-lg w-full"></div>
+      <div><label class="text-xs text-slate-500">自賠責満了日</label><input type="date" id="cJibai" class="border p-2 rounded-lg w-full"></div>
+      <input type="text" id="cInsCompany" placeholder="任意保険会社名" class="border p-2 rounded-lg col-span-2">
+      <input type="text" id="cInsStaff" placeholder="担当者名" class="border p-2 rounded-lg">
+      <input type="tel" id="cInsTel" placeholder="担当者電話番号" class="border p-2 rounded-lg">
+      <div><label class="text-xs text-slate-500">任意保険満了日</label><input type="date" id="cInsExpiry" class="border p-2 rounded-lg w-full"></div>
+    </div>
+    <button id="saveCarBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold">保存する</button>
   </div>
 </div>
 
-<!-- ===================== 車両詳細モーダル（基本情報／保険情報／費用分析） ===================== -->
-<div id="carDetailModal" class="fixed inset-0 z-40 hidden items-center justify-center modal-overlay p-3">
-  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-      <h2 id="carDetailTitle" class="font-bold text-lg text-slate-800">車両詳細</h2>
-      <button id="closeCarDetailModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+<!-- メンテ追加/完了モーダル -->
+<div id="maintModal" class="modal fixed inset-0 z-40 bg-black/50 items-center justify-center p-3">
+  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3">
+    <div class="flex justify-between items-center">
+      <h2 class="font-bold text-lg">メンテナンス予約・記録</h2>
+      <button id="closeMaintModal" class="text-2xl text-slate-400">&times;</button>
     </div>
-
-    <!-- 詳細内サブタブ -->
-    <div class="px-5 pt-3">
-      <nav class="bg-slate-100 rounded-lg p-1 flex gap-1 text-sm font-semibold overflow-x-auto">
-        <button data-detail-tab="basic" class="detail-tab-btn active flex-1 py-1.5 rounded-lg transition whitespace-nowrap">基本情報</button>
-        <button data-detail-tab="insurance" class="detail-tab-btn flex-1 py-1.5 rounded-lg transition whitespace-nowrap">保険情報</button>
-        <button data-detail-tab="cost" class="detail-tab-btn flex-1 py-1.5 rounded-lg transition whitespace-nowrap">費用分析</button>
-      </nav>
+    <input type="hidden" id="maintDocId">
+    <div class="grid grid-cols-2 gap-2 text-sm">
+      <select id="mCategory" class="border p-2 rounded-lg col-span-2"></select>
+      <select id="mShop" class="border p-2 rounded-lg col-span-2"></select>
+      <input type="text" id="mStaff" placeholder="担当者名" class="border p-2 rounded-lg col-span-2">
+      <div><label class="text-xs text-slate-500">予約日</label><input type="date" id="mResDate" class="border p-2 rounded-lg w-full"></div>
+      <div><label class="text-xs text-slate-500">予約時間</label><input type="time" id="mResTime" class="border p-2 rounded-lg w-full"></div>
+      <input type="text" id="mMemo" placeholder="備考" class="border p-2 rounded-lg col-span-2">
+      <hr class="col-span-2 my-1">
+      <p class="col-span-2 text-xs text-slate-400">↓完了時に入力（未実施なら空欄でOK）</p>
+      <div><label class="text-xs text-slate-500">実施日</label><input type="date" id="mDoneDate" class="border p-2 rounded-lg w-full"></div>
+      <input type="number" id="mDoneOdo" placeholder="実施時ODO(km)" class="border p-2 rounded-lg">
+      <input type="number" id="mCost" placeholder="実際の費用(円)" class="border p-2 rounded-lg">
+      <input type="text" id="mWork" placeholder="作業内容" class="border p-2 rounded-lg">
+      <div class="col-span-2"><label class="text-xs text-slate-500">次回予定日</label><input type="date" id="mNext" class="border p-2 rounded-lg w-full"></div>
     </div>
-
-    <!-- 基本情報パネル -->
-    <div id="detailBasicPanel" class="p-5 space-y-3">
-      <dl class="grid grid-cols-2 gap-3 text-sm">
-        <div><dt class="text-slate-400 text-xs">メーカー・車種</dt><dd id="detailMakerModel" class="font-medium text-slate-700">-</dd></div>
-        <div><dt class="text-slate-400 text-xs">年式</dt><dd id="detailYear" class="font-medium text-slate-700">-</dd></div>
-        <div><dt class="text-slate-400 text-xs">ナンバー</dt><dd id="detailPlate" class="font-medium text-slate-700">-</dd></div>
-        <div><dt class="text-slate-400 text-xs">現在の走行距離</dt><dd id="detailOdo" class="font-medium text-slate-700">-</dd></div>
-      </dl>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-        <div id="detailShakenBadge" class="rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500"></div>
-        <div id="detailJibaisekiBadge" class="rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500"></div>
-        <div id="detailInsuranceBadge" class="rounded-lg px-3 py-2 text-xs font-medium bg-slate-100 text-slate-500"></div>
-      </div>
-      <div class="flex gap-2 pt-2">
-        <button id="detailEditBtn" type="button" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">基本情報を編集</button>
-        <button id="detailDeleteBtn" type="button" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-lg text-sm transition">車両を削除</button>
-      </div>
-    </div>
-
-    <!-- 保険情報パネル -->
-    <div id="detailInsurancePanel" class="p-5 space-y-6 hidden">
-      <!-- 自賠責保険 -->
-      <div class="space-y-2">
-        <h3 class="font-bold text-slate-700 text-sm">🛡️ 自賠責保険</h3>
-        <p id="jibaisekiSummary" class="text-xs text-slate-500 bg-slate-50 rounded-lg p-2">未登録</p>
-        <form id="jibaisekiForm" class="grid grid-cols-2 gap-2">
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">保険会社名</label>
-            <input type="text" id="jibaisekiCompany" placeholder="例: ○○損害保険" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">証券番号</label>
-            <input type="text" id="jibaisekiPolicyNo" placeholder="例: 1234-5678" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">満了日</label>
-            <input type="date" id="jibaisekiExpiry" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-2">
-            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">自賠責情報を保存</button>
-          </div>
-        </form>
-      </div>
-
-      <hr class="border-slate-100">
-
-      <!-- 任意保険 -->
-      <div class="space-y-2">
-        <h3 class="font-bold text-slate-700 text-sm">🛡️ 任意保険</h3>
-        <div id="viSummary" class="text-xs text-slate-500 bg-slate-50 rounded-lg p-2 space-y-0.5">未登録</div>
-        <form id="voluntaryForm" class="grid grid-cols-2 gap-2">
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">保険会社名</label>
-            <input type="text" id="viCompany" placeholder="例: ○○海上" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">証券番号</label>
-            <input type="text" id="viPolicyNo" placeholder="例: 9876-5432" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">担当者名</label>
-            <input type="text" id="viAgentName" placeholder="例: 山田太郎" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">担当者電話番号</label>
-            <input type="tel" id="viAgentPhone" placeholder="例: 090-1234-5678" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">代理店名</label>
-            <input type="text" id="viAgencyName" placeholder="例: ○○代理店" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">代理店電話番号</label>
-            <input type="tel" id="viAgencyPhone" placeholder="例: 03-1234-5678" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-2">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">補償内容メモ</label>
-            <textarea id="viMemo" rows="2" placeholder="例: 対人・対物無制限、車両保険あり" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></textarea>
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">満了日</label>
-            <input type="date" id="viExpiry" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-1">
-            <label class="block text-xs font-semibold text-slate-500 mb-1">年間保険料(円)</label>
-            <input type="number" id="viPremium" min="0" step="1" placeholder="例: 65000" class="w-full border border-slate-300 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          </div>
-          <div class="col-span-2">
-            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2 rounded-lg text-sm transition">任意保険情報を保存</button>
-          </div>
-        </form>
-      </div>
-    </div>
-
-    <!-- 費用分析パネル -->
-    <div id="detailCostPanel" class="p-5 space-y-5 hidden">
-      <div id="annualCostCard" class="bg-brand-50 border border-brand-200 rounded-xl p-4">
-        <p class="text-xs font-semibold text-brand-700">年間維持費（直近12ヶ月・完了済みメンテ費用＋給油費用＋年間保険料）</p>
-        <p id="annualCostValue" class="text-3xl font-bold text-brand-800 mt-1">¥0</p>
-        <div class="grid grid-cols-3 gap-2 mt-3 text-xs text-slate-600">
-          <div class="bg-white rounded-lg p-2 text-center"><div class="text-slate-400">給油費用</div><div id="annualFuelCost" class="font-bold text-slate-700">¥0</div></div>
-          <div class="bg-white rounded-lg p-2 text-center"><div class="text-slate-400">メンテ費用</div><div id="annualMaintCost" class="font-bold text-slate-700">¥0</div></div>
-          <div class="bg-white rounded-lg p-2 text-center"><div class="text-slate-400">保険料</div><div id="annualInsuranceCost" class="font-bold text-slate-700">¥0</div></div>
-        </div>
-      </div>
-
-      <div>
-        <h3 class="font-bold text-slate-700 text-sm mb-2">📊 月別費用（燃料費＋完了済みメンテ費用）</h3>
-        <div style="height: 260px;"><canvas id="monthlyCostChart"></canvas></div>
-      </div>
-
-      <div>
-        <h3 class="font-bold text-slate-700 text-sm mb-2">🥧 カテゴリ別費用内訳（完了済みメンテのみ）</h3>
-        <div style="height: 260px;"><canvas id="categoryPieChart"></canvas></div>
-      </div>
-
-      <div>
-        <h3 class="font-bold text-slate-700 text-sm mb-2">📈 燃費推移</h3>
-        <div style="height: 260px;"><canvas id="fuelEfficiencyChart"></canvas></div>
-      </div>
+    <div class="flex gap-2">
+      <button id="saveMaintReserveBtn" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold text-sm">予約として保存</button>
+      <button id="saveMaintDoneBtn" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-sm">✅ 完了にする</button>
     </div>
   </div>
 </div>
 
-<!-- ===================== メンテナンス予約モーダル ===================== -->
-<div id="maintReserveModal" class="fixed inset-0 z-40 hidden items-center justify-center modal-overlay p-3">
-  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-      <h2 class="font-bold text-lg text-slate-800">＋新規予約</h2>
-      <button id="closeMaintReserveModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-    </div>
-    <form id="maintReserveForm" class="p-5 grid grid-cols-2 gap-3">
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">作業カテゴリ <span class="text-red-500">*</span></label>
-        <select id="maintResCategory" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></select>
-      </div>
-      <div class="col-span-1">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">予約日 <span class="text-red-500">*</span></label>
-        <input type="date" id="maintResDate" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-1">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">予約時間</label>
-        <input type="time" id="maintResTime" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">店舗</label>
-        <select id="maintResShop" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-          <option value="">未選択</option>
-        </select>
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">担当者名</label>
-        <input type="text" id="maintResPerson" placeholder="例: 田中さん" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">備考</label>
-        <textarea id="maintResNotes" rows="2" placeholder="任意メモ" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></textarea>
-      </div>
-      <div class="col-span-2 flex gap-2 mt-2">
-        <button type="submit" class="flex-1 bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">予約を登録する</button>
-        <button type="button" id="cancelMaintReserveBtn" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition">キャンセル</button>
-      </div>
-    </form>
-  </div>
+<!-- レシート拡大表示モーダル -->
+<div id="imgModal" class="modal fixed inset-0 z-50 bg-black/80 items-center justify-center p-3" onclick="this.classList.remove('active')">
+  <img id="imgModalSrc" class="max-w-full max-h-full rounded-lg">
 </div>
 
-<!-- ===================== メンテナンス完了モーダル ===================== -->
-<div id="maintCompleteModal" class="fixed inset-0 z-40 hidden items-center justify-center modal-overlay p-3">
-  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-      <h2 class="font-bold text-lg text-slate-800">✅ 完了にする</h2>
-      <button id="closeMaintCompleteModalBtn" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
-    </div>
-    <form id="maintCompleteForm" class="p-5 grid grid-cols-2 gap-3">
-      <input type="hidden" id="maintCompleteId">
-      <div class="col-span-1">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">実施日 <span class="text-red-500">*</span></label>
-        <input type="date" id="maintActualDate" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-1">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">実施時走行距離(km) <span class="text-red-500">*</span></label>
-        <input type="number" id="maintActualOdo" min="0" step="1" required class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">実際の費用(円)</label>
-        <input type="number" id="maintActualCost" min="0" step="1" placeholder="例: 8000" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">作業内容</label>
-        <textarea id="maintWorkDone" rows="2" placeholder="実施した作業内容を記入" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"></textarea>
-      </div>
-      <div class="col-span-2">
-        <label class="block text-xs font-semibold text-slate-500 mb-1">次回予定日</label>
-        <input type="date" id="maintNextDate" class="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400">
-      </div>
-      <div class="col-span-2 flex gap-2 mt-2">
-        <button type="submit" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">完了として保存</button>
-        <button type="button" id="cancelMaintCompleteBtn" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold py-2.5 rounded-lg text-sm transition">キャンセル</button>
-      </div>
-    </form>
-  </div>
-</div>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getFirestore, collection, doc, addDoc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, query, orderBy, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-<!-- ===================== レシート画像拡大表示（ライトボックス） ===================== -->
-<div id="receiptLightbox" class="fixed inset-0 z-50 hidden items-center justify-center modal-overlay p-4">
-  <div class="fade-in max-w-lg w-full">
-    <img id="receiptLightboxImg" class="w-full h-auto rounded-xl shadow-xl" alt="レシート拡大画像">
-    <button id="closeReceiptLightboxBtn" class="mt-3 w-full bg-white/90 hover:bg-white text-slate-700 font-semibold py-2 rounded-lg text-sm transition">閉じる</button>
-  </div>
-</div>
+  // ★★★ ここをご自身のFirebase設定に書き換えてください ★★★
+  const firebaseConfig = {
+    apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
+  authDomain: "my-car-manager-daab9.firebaseapp.com",
+  projectId: "my-car-manager-daab9",
+  storageBucket: "my-car-manager-daab9.firebasestorage.app",
+  messagingSenderId: "287236190745",
+  appId: "1:287236190745:web:caa18d35701205aa0db088"
+  };
 
-<!-- トースト通知 -->
-<div id="toast" class="fixed bottom-5 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-4 py-2 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity z-50"></div>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  let currentUser = null;
+  let currentCarId = null;
 
-<!-- Firebase v9以降のモジュール版SDKを使用（app.js内でimportしています） -->
-<script type="module" src="js/app.js"></script>
+  const $ = (id) => document.getElementById(id);
+  const loginBtn = $('loginBtn'), logoutBtn = $('logoutBtn');
+  const unauthScreen = $('unauthScreen'), authScreen = $('authScreen');
+  const globalCarSelect = $('globalCarSelect');
+
+  // ---------- タブ切り替え ----------
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      $(e.currentTarget.dataset.target).classList.add('active');
+    });
+  });
+  document.querySelectorAll('.maintSub').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      $('maintListActive').classList.toggle('hidden', e.currentTarget.dataset.status !== 'active');
+      $('maintListDone').classList.toggle('hidden', e.currentTarget.dataset.status !== 'done');
+    });
+  });
+
+  // ---------- 認証 ----------
+  loginBtn.addEventListener('click', () => signInWithRedirect(auth, new GoogleAuthProvider()));
+  logoutBtn.addEventListener('click', () => signOut(auth));
+
+  getRedirectResult(auth).catch((error) => {
+    alert("ログインエラー\nコード: " + error.code + "\n内容: " + error.message);
+  });
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      currentUser = user;
+      loginBtn.classList.add('hidden');
+      logoutBtn.classList.remove('hidden');
+      unauthScreen.classList.add('hidden');
+      authScreen.classList.remove('hidden');
+      await loadCategories();
+      await loadShops();
+      await loadCars();
+    } else {
+      currentUser = null;
+      loginBtn.classList.remove('hidden');
+      logoutBtn.classList.add('hidden');
+      unauthScreen.classList.remove('hidden');
+      authScreen.classList.add('hidden');
+    }
+  });
+
+  // ---------- 共通：残り日数と色 ----------
+  function daysUntil(dateStr) {
+    if (!dateStr) return null;
+    const t = new Date(dateStr); t.setHours(0,0,0,0);
+    const n = new Date(); n.setHours(0,0,0,0);
+    return Math.ceil((t - n) / 86400000);
+  }
+  function expiryColor(days) {
+    if (days === null) return 'bg-slate-100 text-slate-400';
+    if (days < 0) return 'bg-red-100 text-red-700';
+    if (days <= 30) return 'bg-red-100 text-red-700';
+    if (days <= 60) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-green-100 text-green-700';
+  }
+  function reserveColor(days) {
+    if (days === null) return 'bg-slate-100 text-slate-400';
+    if (days < 0) return 'bg-red-200 text-red-800';
+    if (days <= 3) return 'bg-red-100 text-red-700';
+    if (days <= 7) return 'bg-yellow-100 text-yellow-700';
+    return 'bg-blue-100 text-blue-700';
+  }
+
+  // ---------- カテゴリ管理 ----------
+  async function loadCategories() {
+    const colRef = collection(db, `users/${currentUser.uid}/categories`);
+    let snap = await getDocs(query(colRef, orderBy('createdAt')));
+    if (snap.empty) {
+      const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換",
+        "エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
+      for (const name of defaults) await addDoc(colRef, { name, createdAt: serverTimestamp() });
+      snap = await getDocs(query(colRef, orderBy('createdAt')));
+    }
+    const listEl = $('categoryList'); const selectEl = $('mCategory');
+    listEl.innerHTML = ''; selectEl.innerHTML = '';
+    snap.forEach(d => {
+      const data = d.data();
+      const li = document.createElement('li');
+      li.className = 'flex items-center gap-2 py-1.5';
+      li.innerHTML = `
+        <input type="text" value="${data.name}" data-id="${d.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
+        <button class="catDelBtn text-red-500 text-xs font-bold px-2" data-id="${d.id}">削除</button>`;
+      listEl.appendChild(li);
+      const opt = document.createElement('option');
+      opt.value = data.name; opt.textContent = data.name;
+      selectEl.appendChild(opt);
+    });
+    listEl.querySelectorAll('.catEditInput').forEach(inp => {
+      inp.addEventListener('change', async () => {
+        await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: inp.value.trim() });
+        loadCategories();
+      });
+    });
+    listEl.querySelectorAll('.catDelBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('このカテゴリを削除しますか？')) return;
+        await deleteDoc(doc(db, `users/${currentUser.uid}/categories`, btn.dataset.id));
+        loadCategories();
+      });
+    });
+  }
+  $('addCategoryBtn').addEventListener('click', async () => {
+    const name = $('newCategoryName').value.trim();
+    if (!name) return;
+    await addDoc(collection(db, `users/${currentUser.uid}/categories`), { name, createdAt: serverTimestamp() });
+    $('newCategoryName').value = '';
+    loadCategories();
+  });
+
+  // ---------- 店舗マスタ管理 ----------
+  async function loadShops() {
+    const colRef = collection(db, `users/${currentUser.uid}/shops`);
+    const snap = await getDocs(query(colRef, orderBy('createdAt')));
+    const listEl = $('shopList'); const selectEl = $('mShop');
+    listEl.innerHTML = ''; selectEl.innerHTML = '<option value="">店舗を選択</option>';
+    snap.forEach(d => {
+      const data = d.data();
+      const li = document.createElement('li');
+      li.className = 'flex justify-between items-center py-1.5 text-sm';
+      li.innerHTML = `<span>${data.name}（${data.tel || '-'}）</span>
+        <button class="shopDelBtn text-red-500 text-xs font-bold" data-id="${d.id}">削除</button>`;
+      listEl.appendChild(li);
+      const opt = document.createElement('option');
+      opt.value = d.id; opt.textContent = data.name;
+      selectEl.appendChild(opt);
+    });
+    listEl.querySelectorAll('.shopDelBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('この店舗を削除しますか？')) return;
+        await deleteDoc(doc(db, `users/${currentUser.uid}/shops`, btn.dataset.id));
+        loadShops();
+      });
+    });
+  }
+  $('addShopBtn').addEventListener('click', async () => {
+    const name = $('newShopName').value.trim();
+    if (!name) return;
+    await addDoc(collection(db, `users/${currentUser.uid}/shops`), {
+      name, tel: $('newShopTel').value.trim(), createdAt: serverTimestamp()
+    });
+    $('newShopName').value = ''; $('newShopTel').value = '';
+    loadShops();
+  });
+
+  // ---------- 車両管理 ----------
+  $('addCarBtn').addEventListener('click', () => {
+    $('carDocId').value = '';
+    document.querySelectorAll('#carModal input').forEach(i => i.value = '');
+    $('carModal').classList.add('active');
+  });
+  $('closeCarModal').addEventListener('click', () => $('carModal').classList.remove('active'));
+
+  $('saveCarBtn').addEventListener('click', async () => {
+    const nickname = $('cNickname').value.trim();
+    if (!nickname) return alert('ニックネームは必須です');
+    const data = {
+      nickname, maker: $('cMaker').value, model: $('cModel').value,
+      year: $('cYear').value, plate: $('cPlate').value,
+      odo: Number($('cOdo').value) || 0,
+      shaken: $('cShaken').value, jibai: $('cJibai').value,
+      insCompany: $('cInsCompany').value, insStaff: $('cInsStaff').value,
+      insTel: $('cInsTel').value, insExpiry: $('cInsExpiry').value,
+      updatedAt: serverTimestamp()
+    };
+    const docId = $('carDocId').value;
+    if (docId) {
+      await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), data);
+    } else {
+      const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
+      if (snap.size >= 5) return alert('登録できる車両は5台までです');
+      data.createdAt = serverTimestamp();
+      await addDoc(collection(db, `users/${currentUser.uid}/cars`), data);
+    }
+    $('carModal').classList.remove('active');
+    loadCars();
+  });
+
+  async function loadCars() {
+    const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
+    const list = $('carList');
+    list.innerHTML = '';
+    globalCarSelect.innerHTML = '';
+    $('addCarBtn').disabled = snap.size >= 5;
+    $('addCarBtn').classList.toggle('opacity-40', snap.size >= 5);
+
+    snap.forEach(d => {
+      const c = d.data();
+      const opt = document.createElement('option');
+      opt.value = d.id; opt.textContent = c.nickname;
+      globalCarSelect.appendChild(opt);
+
+      const shakenDays = daysUntil(c.shaken);
+      const insDays = daysUntil(c.insExpiry);
+      const div = document.createElement('div');
+      div.className = 'bg-white p-4 rounded-xl shadow-sm text-sm space-y-1';
+      div.innerHTML = `
+        <h3 class="font-bold text-lg text-blue-700">${c.nickname}</h3>
+        <p class="text-slate-500 text-xs">${c.maker||''} ${c.model||''} ${c.year? '('+c.year+'年)':''}</p>
+        <p>走行距離: ${c.odo||0} km ／ ナンバー: ${c.plate||'-'}</p>
+        <span class="inline-block px-2 py-0.5 rounded text-xs ${expiryColor(shakenDays)}">車検: ${c.shaken||'未設定'}${shakenDays!==null?`（残り${shakenDays}日）`:''}</span>
+        <span class="inline-block px-2 py-0.5 rounded text-xs ${expiryColor(insDays)}">保険: ${c.insExpiry||'未設定'}${insDays!==null?`（残り${insDays}日）`:''}</span>
+        ${c.insStaff? `<p class="text-xs">担当: ${c.insStaff} <a href="tel:${c.insTel}" class="text-blue-600 underline">${c.insTel||''}</a></p>`:''}
+        <div class="flex gap-2 pt-1">
+          <button class="editCarBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集</button>
+          <button class="delCarBtn text-red-500 text-xs font-bold" data-id="${d.id}">削除</button>
+        </div>`;
+      list.appendChild(div);
+    });
+
+    list.querySelectorAll('.editCarBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars`, btn.dataset.id));
+        const c = snap2.data();
+        $('carDocId').value = btn.dataset.id;
+        $('cNickname').value = c.nickname||''; $('cMaker').value=c.maker||''; $('cModel').value=c.model||'';
+        $('cYear').value=c.year||''; $('cPlate').value=c.plate||''; $('cOdo').value=c.odo||'';
+        $('cShaken').value=c.shaken||''; $('cJibai').value=c.jibai||'';
+        $('cInsCompany').value=c.insCompany||''; $('cInsStaff').value=c.insStaff||'';
+        $('cInsTel').value=c.insTel||''; $('cInsExpiry').value=c.insExpiry||'';
+        $('carModal').classList.add('active');
+      });
+    });
+    list.querySelectorAll('.delCarBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('この車両を削除しますか？（関連する給油・メンテ記録は残ります）')) return;
+        await deleteDoc(doc(db, `users/${currentUser.uid}/cars`, btn.dataset.id));
+        loadCars();
+      });
+    });
+
+    if (globalCarSelect.value) {
+      currentCarId = globalCarSelect.value;
+      loadFuel(); loadMaint();
+    }
+  }
+  globalCarSelect.addEventListener('change', () => {
+    currentCarId = globalCarSelect.value;
+    loadFuel(); loadMaint();
+  });
+
+  // ---------- 給油記録（レシート撮影対応） ----------
+  function compressImage(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(800 / img.width, 1);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+// ---------- レシートOCR：画像 → テキスト抽出 ----------
+async function scanReceipt(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          // OCR精度向上のため、幅1200px程度にリサイズしてから認識にかける
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(1200 / img.width, 1);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+          // 日本語＋英数字を認識対象にする（数字だけでも日本語レシートは'jpn'指定が必須）
+          const { data: { text } } = await Tesseract.recognize(dataUrl, 'jpn+eng');
+          resolve(text);
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// ---------- OCR結果のテキストから日付・給油量・金額を推測 ----------
+function parseReceiptText(text) {
+  console.log('OCRで読み取ったテキスト:\n', text);
+  const result = {};
+
+  // 日付：2026/08/13、2026-08-13、2026年8月13日 などに対応
+  const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
+  if (dateMatch) {
+    const mm = dateMatch[2].padStart(2, '0');
+    const dd = dateMatch[3].padStart(2, '0');
+    result.date = `${dateMatch[1]}-${mm}-${dd}`;
+  }
+
+  // 給油量：35.5L、35.50ℓ などに対応（小数点付きの数値を優先）
+  const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
+  if (litersMatch) result.liters = parseFloat(litersMatch[1]);
+
+  // 金額：「合計」「小計」「請求」などのキーワード近くの数字を優先的に採用
+  let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
+  if (!amountMatch) {
+    // キーワードが見つからない場合は「¥」マーク付きの数字をフォールバックとして採用
+    amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
+  }
+  if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
+
+  return result;
+}
+
+// ---------- スキャンボタン押下時の処理 ----------
+$('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
+
+$('fReceiptScan').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const statusEl = $('scanStatus');
+  statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
+  statusEl.classList.remove('hidden');
+  $('scanReceiptBtn').disabled = true;
+  $('scanReceiptBtn').classList.add('opacity-50');
+
+  try {
+    const text = await scanReceipt(file);
+    const parsed = parseReceiptText(text);
+
+    if (parsed.date) $('fDate').value = parsed.date;
+    if (parsed.liters) $('fLiters').value = parsed.liters;
+    if (parsed.amount) $('fPrice').value = parsed.amount;
+
+    if (parsed.date || parsed.liters || parsed.amount) {
+      statusEl.textContent = '✅ 読み取り完了。内容を確認してください';
+    } else {
+      statusEl.textContent = '⚠️ うまく読み取れませんでした。手動で入力してください';
+    }
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
+  } finally {
+    $('scanReceiptBtn').disabled = false;
+    $('scanReceiptBtn').classList.remove('opacity-50');
+    e.target.value = ''; // 同じ画像を再選択できるようにリセット
+  }
+});
+
+  $('saveFuelBtn').addEventListener('click', async () => {
+    if (!currentCarId) return alert('先に車両を選択してください');
+    const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value);
+    if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
+
+    // 燃費自動計算（直前の給油記録との差分から）
+    const prevSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer', 'desc')));
+    let efficiency = null;
+    if (!prevSnap.empty) {
+      const prevOdo = prevSnap.docs[0].data().odometer;
+      if (odo > prevOdo) efficiency = Math.round(((odo - prevOdo) / liters) * 10) / 10;
+    }
+
+    let receiptImage = null;
+    const file = $('fReceipt').files[0];
+    if (file) receiptImage = await compressImage(file);
+
+    await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
+      date, odometer: odo, liters, amount: price, fullTank: $('fFull').checked,
+      efficiency, receiptImage, createdAt: serverTimestamp()
+    });
+    await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
+
+    $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value=''; $('fReceipt').value='';
+    loadFuel(); loadCars();
+  });
+
+  async function loadFuel() {
+    if (!currentCarId) return;
+    const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('date', 'desc')));
+    const list = $('fuelList'); list.innerHTML = '';
+    snap.forEach(d => {
+      const f = d.data();
+      const div = document.createElement('div');
+      div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm flex justify-between items-center';
+      const img = f.receiptImage ? `<img src="${f.receiptImage}" class="w-12 h-12 object-cover rounded cursor-pointer receiptThumb">` : '';
+      div.innerHTML = `
+        <div><p class="font-bold">${f.date}</p>
+        <p class="text-xs text-slate-500">ODO:${f.odometer}km ／ ${f.liters}L ／ ¥${f.amount}${f.efficiency?` ／ 燃費${f.efficiency}km/L`:''}</p></div>
+        <div class="flex items-center gap-2">${img}<button class="delFuelBtn text-red-500 text-xs" data-id="${d.id}">×</button></div>`;
+      list.appendChild(div);
+      const thumb = div.querySelector('.receiptThumb');
+      if (thumb) thumb.addEventListener('click', () => {
+        $('imgModalSrc').src = f.receiptImage;
+        $('imgModal').classList.add('active');
+      });
+    });
+    list.querySelectorAll('.delFuelBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('削除しますか？')) return;
+        await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
+        loadFuel();
+      });
+    });
+  }
+
+  // ---------- メンテナンス（予約ステータス管理） ----------
+  $('addMaintBtn').addEventListener('click', () => {
+    if (!currentCarId) return alert('先に車両を選択してください');
+    $('maintDocId').value = '';
+    document.querySelectorAll('#maintModal input, #maintModal select').forEach(i => i.value = '');
+    $('maintModal').classList.add('active');
+  });
+  $('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
+
+  async function saveMaint(status) {
+    const data = {
+      status,
+      category: $('mCategory').value, shopId: $('mShop').value, staffName: $('mStaff').value,
+      reservationDate: $('mResDate').value, reservationTime: $('mResTime').value, memo: $('mMemo').value,
+      completedDate: $('mDoneDate').value, completedOdo: Number($('mDoneOdo').value)||null,
+      actualCost: Number($('mCost').value)||null, workDetail: $('mWork').value, nextScheduleDate: $('mNext').value,
+      updatedAt: serverTimestamp()
+    };
+    const docId = $('maintDocId').value;
+    const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
+    if (docId) {
+      await updateDoc(doc(colRef, docId), data);
+    } else {
+      data.createdAt = serverTimestamp();
+      await addDoc(colRef, data);
+    }
+    $('maintModal').classList.remove('active');
+    loadMaint();
+  }
+  $('saveMaintReserveBtn').addEventListener('click', () => saveMaint('予約済み'));
+  $('saveMaintDoneBtn').addEventListener('click', () => saveMaint('完了'));
+
+  async function loadMaint() {
+    if (!currentCarId) return;
+    const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`), orderBy('createdAt', 'desc')));
+    const activeList = $('maintListActive'), doneList = $('maintListDone');
+    activeList.innerHTML = ''; doneList.innerHTML = '';
+    snap.forEach(d => {
+      const m = d.data();
+      const div = document.createElement('div');
+      div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+      if (m.status === '完了') {
+        div.innerHTML = `
+          <p class="font-bold text-green-700">✅ ${m.category}</p>
+          <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0} ／ ${m.workDetail||''}</p>
+          <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>`;
+        doneList.appendChild(div);
+      } else {
+        const days = daysUntil(m.reservationDate);
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div>
+              <p class="font-bold">${m.category}</p>
+              <p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span>
+          </div>
+          <div class="flex gap-2 pt-1">
+            <button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button>
+            <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
+          </div>`;
+        activeList.appendChild(div);
+      }
+    });
+    document.querySelectorAll('.editMaintBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
+        const m = snap2.data();
+        $('maintDocId').value = btn.dataset.id;
+        $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
+        $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
+        $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
+        $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||''; $('mNext').value=m.nextScheduleDate||'';
+        $('maintModal').classList.add('active');
+      });
+    });
+    document.querySelectorAll('.delMaintBtn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('削除しますか？')) return;
+        await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
+        loadMaint();
+      });
+    });
+  }
+</script>
 </body>
 </html>
