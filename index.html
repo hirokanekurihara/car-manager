@@ -2,15 +2,33 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="マイカー管理">
+<meta name="theme-color" content="#1d4ed8">
 <title>マイカー管理アプリ</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
-  body { font-family: 'Noto Sans JP', sans-serif; }
+  :root {
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+  }
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    padding-bottom: calc(6rem + var(--sab));
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+  }
+  @media all and (display-mode: standalone) {
+    header { padding-top: calc(0.75rem + var(--sat)); }
+  }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
   .tab-btn.active { background-color: #2563eb; color: #fff; }
@@ -31,9 +49,10 @@
     color:#64748b; cursor:pointer; flex-shrink:0; }
   .sort-btn:hover { background:#e2e8f0; }
   .sort-btn:disabled { opacity:.3; cursor:default; }
+  .modal-scroll { -webkit-overflow-scrolling: touch; overflow-y: auto; }
 </style>
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
+<body class="bg-slate-100 text-slate-800 min-h-screen">
 
 <header class="bg-blue-700 text-white shadow sticky top-0 z-30 px-4 py-3 flex justify-between items-center">
   <div>
@@ -56,19 +75,14 @@
 
 <main id="authScreen" class="max-w-5xl mx-auto px-3 sm:px-4 py-4 hidden space-y-4">
 
-  <nav class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs sm:text-sm font-semibold">
-    <button class="tab-btn active flex-1 py-2 rounded-lg transition" data-target="tab-cars">🚘 車両</button>
-    <button class="tab-btn flex-1 py-2 rounded-lg transition" data-target="tab-fuel">⛽ 給油</button>
-    <button class="tab-btn flex-1 py-2 rounded-lg transition" data-target="tab-maint">🔧 メンテ</button>
-    <button class="tab-btn flex-1 py-2 rounded-lg transition" data-target="tab-settings">⚙️ 設定</button>
-  </nav>
+  <nav id="mainTabNav" class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs sm:text-sm font-semibold"></nav>
 
   <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-2">
     <label class="text-sm font-bold text-slate-600 whitespace-nowrap">対象車両</label>
     <select id="globalCarSelect" class="flex-1 border border-slate-300 p-2 rounded-lg text-sm"></select>
   </div>
 
-  <section id="tab-cars" class="tab-content active space-y-3">
+  <section id="tab-cars" class="tab-content space-y-3">
     <button id="addCarBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow">＋ 車両を追加（最大5台）</button>
     <div id="carList" class="grid sm:grid-cols-2 gap-3"></div>
   </section>
@@ -91,9 +105,20 @@
         <input type="number" id="fOdo" placeholder="走行距離(km)" class="border border-slate-300 p-2 rounded-lg">
         <input type="number" id="fLiters" placeholder="給油量(L)" step="0.01" class="border border-slate-300 p-2 rounded-lg">
         <input type="number" id="fPrice" placeholder="金額(円)" class="border border-slate-300 p-2 rounded-lg">
-        <label class="flex items-center gap-2 border border-slate-300 p-2 rounded-lg bg-slate-50 text-xs cursor-pointer">
+        <div class="border border-slate-200 bg-blue-50 p-2 rounded-lg text-center">
+          <p class="text-xs text-slate-400">単価（自動計算）</p>
+          <p id="fUnitPriceDisplay" class="font-black text-blue-700 text-base">- 円/L</p>
+        </div>
+        <label class="flex items-center gap-2 border border-slate-300 p-2 rounded-lg bg-slate-50 text-xs cursor-pointer col-span-2">
           <input type="checkbox" id="fFull" checked class="w-4 h-4"> 満タン給油
         </label>
+        <div class="col-span-2 space-y-1">
+          <label class="text-xs text-slate-500">給油した店舗</label>
+          <select id="fShopSelect" class="border border-slate-300 p-2 rounded-lg w-full text-sm">
+            <option value="">店舗マスタから選択</option>
+          </select>
+          <input type="text" id="fShopFree" placeholder="または直接入力（マスタにない場合）" class="border border-slate-300 p-2 rounded-lg w-full text-xs">
+        </div>
         <div class="col-span-2 border border-slate-300 p-3 rounded-lg bg-slate-50 space-y-2">
           <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-bold text-xs transition">🧾 レシートをスキャンして自動入力</button>
           <input type="file" id="fReceiptScan" accept="image/*" capture="environment" class="hidden">
@@ -116,6 +141,12 @@
   </section>
 
   <section id="tab-settings" class="tab-content space-y-3">
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-1 text-slate-700">📱 タブの表示順</h3>
+      <p class="text-xs text-slate-400 mb-3">▲▼で並び替え。全デバイスで共有されます。</p>
+      <ul id="tabOrderList" class="text-sm divide-y divide-slate-100 mb-3"></ul>
+      <button id="resetTabOrderBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 py-2 rounded-lg text-sm font-bold transition">↩️ 初期の並び順に戻す</button>
+    </div>
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🔧 作業カテゴリの管理</h3>
       <p class="text-xs text-slate-400 -mt-2 mb-3">※ここに追加した項目は、メンテ完了時のチェックリストにも自動で反映されます</p>
@@ -148,7 +179,7 @@
       <h2 class="font-bold text-lg">📝 変更履歴</h2>
       <button id="closeChangelogModal" class="text-white text-3xl leading-none opacity-70 hover:opacity-100">&times;</button>
     </div>
-    <div class="overflow-y-auto flex-1 p-5">
+    <div class="modal-scroll flex-1 p-5">
       <div id="changelogContent" class="markdown-body text-sm text-slate-700">
         <p class="text-center text-slate-400 py-4">読み込み中...</p>
       </div>
@@ -170,8 +201,9 @@
       <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-insurance">🛡️ 保険</button>
       <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-tire">🔵 タイヤ</button>
       <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-ticket">🎫 チケット</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-analysis">📊 分析</button>
     </div>
-    <div class="overflow-y-auto flex-1 p-4 space-y-3">
+    <div class="modal-scroll flex-1 p-4 space-y-3">
 
       <div id="dtab-basic" class="detail-tab-content space-y-3">
         <div class="grid grid-cols-2 gap-3 text-sm">
@@ -217,6 +249,7 @@
             <div id="ins-expiry-card" class="p-2 rounded-lg"><p class="text-blue-200 text-xs">満了日</p><p id="ins-expiry" class="font-bold text-xs">-</p><p id="ins-expiry-days" class="text-xs"></p></div>
             <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">等級</p><p id="ins-grade" class="font-bold text-xs">-</p></div>
             <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">運転者/年齢条件</p><p id="ins-condition" class="font-bold text-xs">-</p></div>
+            <div class="bg-white/10 p-2 rounded-lg col-span-2"><p class="text-blue-200 text-xs">年間保険料</p><p id="ins-annual-fee" class="font-bold text-sm">-</p></div>
           </div>
           <div class="bg-white/10 p-3 rounded-xl text-xs mb-3">
             <p class="text-blue-200 font-bold mb-1">補償内容メモ</p>
@@ -276,12 +309,32 @@
         <button id="addTicketBtn" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl font-bold text-sm shadow">＋ チケットパックを追加</button>
         <div id="ticketList" class="space-y-3"></div>
       </div>
+
+      <div id="dtab-analysis" class="detail-tab-content hidden space-y-4">
+        <div id="analysisSummaryCards" class="grid grid-cols-2 gap-2 text-sm"></div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+          <p class="font-bold text-slate-700 text-sm mb-2">📅 月別費用（直近12ヶ月）</p>
+          <canvas id="monthlyChart" height="200"></canvas>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+          <p class="font-bold text-slate-700 text-sm mb-2">🍩 年間費用の内訳</p>
+          <div class="flex items-center gap-3">
+            <div style="width:160px;height:160px;flex-shrink:0"><canvas id="donutChart"></canvas></div>
+            <div id="donutLegend" class="text-xs space-y-1 flex-1"></div>
+          </div>
+        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
+          <p class="font-bold text-slate-700 text-sm mb-2">📈 燃費推移（直近20件）</p>
+          <canvas id="efficiencyChart" height="180"></canvas>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 
 <div id="carModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
-  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scroll">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
       <h2 id="carModalTitle" class="font-bold text-lg">車両情報を登録</h2>
       <button id="closeCarModal" class="text-2xl text-slate-400">&times;</button>
@@ -319,7 +372,7 @@
 </div>
 
 <div id="insModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
-  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scroll">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
       <h2 class="font-bold text-lg">🛡️ 保険情報を編集</h2>
       <button id="closeInsModal" class="text-2xl text-slate-400">&times;</button>
@@ -333,6 +386,7 @@
           <input type="text" id="iPolicy" placeholder="証券番号" class="border p-2.5 rounded-xl col-span-2">
           <input type="text" id="iGrade" placeholder="等級（例：15等級/0年）" class="border p-2.5 rounded-xl">
           <input type="text" id="iCondition" placeholder="運転者限定/年齢条件" class="border p-2.5 rounded-xl">
+          <input type="number" id="iAnnualFee" placeholder="年間保険料（円）" class="border p-2.5 rounded-xl col-span-2">
           <input type="text" id="iStaff" placeholder="担当者名" class="border p-2.5 rounded-xl">
           <input type="tel" id="iTel" placeholder="担当者電話番号" class="border p-2.5 rounded-xl">
           <input type="text" id="iAgency" placeholder="代理店名" class="border p-2.5 rounded-xl">
@@ -355,7 +409,7 @@
 </div>
 
 <div id="tireModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
-  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scroll">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
       <h2 class="font-bold text-lg">🔵 タイヤ情報を編集</h2>
       <button id="closeTireModal" class="text-2xl text-slate-400">&times;</button>
@@ -385,9 +439,8 @@
   </div>
 </div>
 
-<!-- チケットパック追加モーダル（購入店舗をマスタから選択＋自由入力の併用） -->
 <div id="ticketModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
-  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scroll">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
       <h2 class="font-bold text-lg">🎫 チケットパックを追加</h2>
       <button id="closeTicketModal" class="text-2xl text-slate-400">&times;</button>
@@ -401,9 +454,7 @@
       <div><label class="text-xs text-slate-500 block mb-1">有効期限（任意）</label><input type="date" id="tExpiry" class="border p-2.5 rounded-xl w-full"></div>
       <div class="col-span-2">
         <label class="text-xs text-slate-500 block mb-1">購入店舗</label>
-        <select id="tShopSelect" class="border p-2.5 rounded-xl w-full mb-1">
-          <option value="">店舗マスタから選択</option>
-        </select>
+        <select id="tShopSelect" class="border p-2.5 rounded-xl w-full mb-1"><option value="">店舗マスタから選択</option></select>
         <input type="text" id="tShopFree" placeholder="または直接入力（マスタにない場合）" class="border p-2.5 rounded-xl w-full text-xs">
       </div>
       <button id="saveTicketBtn" class="col-span-2 bg-purple-600 text-white py-3 rounded-xl font-bold shadow">登録する</button>
@@ -411,9 +462,8 @@
   </div>
 </div>
 
-<!-- メンテ追加/完了モーダル（作業内容チェックリストはカテゴリマスタから自動生成・完了時備考を分離） -->
 <div id="maintModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
-  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scroll">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
       <h2 class="font-bold text-lg">🔧 メンテナンス予約・記録</h2>
       <button id="closeMaintModal" class="text-2xl text-slate-400">&times;</button>
@@ -428,7 +478,6 @@
         <div><label class="text-xs text-slate-500 block mb-1">予約時間</label><input type="time" id="mResTime" class="border p-2.5 rounded-xl w-full"></div>
       </div>
       <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
-
       <div class="border-t pt-3">
         <p class="text-xs font-bold text-slate-600 mb-2">↓ 完了時に入力（未実施なら空欄でOK）</p>
         <div class="grid grid-cols-2 gap-2 mb-2">
@@ -438,14 +487,12 @@
           <input type="text" id="mWork" placeholder="作業内容（自由記入）" class="border p-2.5 rounded-xl">
           <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">次回予定日</label><input type="date" id="mNext" class="border p-2.5 rounded-xl w-full"></div>
         </div>
-
         <div class="bg-green-50 border border-green-100 p-3 rounded-xl">
           <p class="text-xs font-bold text-green-700 mb-2">✅ 実施した作業（複数選択可・カテゴリ管理と連動）</p>
           <div id="workChecklist" class="grid grid-cols-2 gap-1"></div>
         </div>
         <textarea id="mDoneNote" placeholder="完了時の備考（気になった点・次回への申し送りなど）" class="border p-2.5 rounded-xl w-full h-20 resize-none text-xs mt-2"></textarea>
       </div>
-
       <div class="flex gap-2">
         <button id="saveMaintReserveBtn" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-sm">予約として保存</button>
         <button id="saveMaintDoneBtn" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm">✅ 完了にする</button>
@@ -462,10 +509,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, getDoc, getDocs,
-  updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch
+  updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
+const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
+const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 
 const firebaseConfig = {
   apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
@@ -479,11 +528,18 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
 let currentUser = null;
 let currentCarId = null;
 let currentDetailCarData = null;
 let cachedCategories = [];
 let cachedShops = [];
+let currentTabOrder = [...DEFAULT_TAB_ORDER];
+let activeTabKey = null; // 現在表示中のタブを記憶（並び替え操作で強制的に画面が切り替わらないようにするため）
+
+let chartMonthly = null;
+let chartDonut = null;
+let chartEfficiency = null;
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
@@ -497,16 +553,16 @@ function daysUntil(dateStr) {
 }
 function expiryBadge(days) {
   if (days === null) return { cls: 'bg-slate-100 text-slate-400', label: '未設定' };
-  if (days < 0)   return { cls: 'bg-red-100 text-red-700', label: `${Math.abs(days)}日超過` };
-  if (days <= 30)  return { cls: 'bg-red-100 text-red-700', label: `残り${days}日` };
-  if (days <= 60)  return { cls: 'bg-yellow-100 text-yellow-700', label: `残り${days}日` };
+  if (days < 0) return { cls: 'bg-red-100 text-red-700', label: `${Math.abs(days)}日超過` };
+  if (days <= 30) return { cls: 'bg-red-100 text-red-700', label: `残り${days}日` };
+  if (days <= 60) return { cls: 'bg-yellow-100 text-yellow-700', label: `残り${days}日` };
   return { cls: 'bg-green-100 text-green-700', label: `残り${days}日` };
 }
 function reserveColor(days) {
   if (days === null) return 'bg-slate-100 text-slate-400';
-  if (days < 0)  return 'bg-red-200 text-red-800';
-  if (days <= 3)  return 'bg-red-100 text-red-700';
-  if (days <= 7)  return 'bg-yellow-100 text-yellow-700';
+  if (days < 0) return 'bg-red-200 text-red-800';
+  if (days <= 3) return 'bg-red-100 text-red-700';
+  if (days <= 7) return 'bg-yellow-100 text-yellow-700';
   return 'bg-blue-100 text-blue-700';
 }
 function tireAgeBadge(madeCode) {
@@ -526,7 +582,6 @@ function showToast(msg) {
   setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.4s'; setTimeout(()=>t.remove(),400); }, 2000);
 }
 
-// ---------- 認証 ----------
 function isStandalonePWA() {
   return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
 }
@@ -546,14 +601,19 @@ $('loginBtn').addEventListener('click', doLogin);
 $('loginBtnMain').addEventListener('click', () => { $('loginStatus').classList.remove('hidden'); doLogin(); });
 $('logoutBtn').addEventListener('click', () => signOut(auth));
 getRedirectResult(auth).catch(err => {
-  alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
+  if (err.code && err.code !== 'auth/null-user') {
+    alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
+  }
 });
 onAuthStateChanged(auth, async user => {
   if (user) {
     currentUser = user;
     $('loginBtn').classList.add('hidden'); $('logoutBtn').classList.remove('hidden');
     $('unauthScreen').classList.add('hidden'); $('authScreen').classList.remove('hidden');
-    await loadCategories(); await loadShops(); await loadCars();
+    await loadTabOrder();
+    await loadCategories();
+    await loadShops();
+    await loadCars();
   } else {
     currentUser = null;
     $('loginBtn').classList.remove('hidden'); $('logoutBtn').classList.add('hidden');
@@ -561,7 +621,6 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-// ---------- CHANGELOG表示 ----------
 $('openChangelogBtn').addEventListener('click', async () => {
   const contentEl = $('changelogContent');
   contentEl.innerHTML = '<p class="text-center text-slate-400 py-4">読み込み中...</p>';
@@ -584,42 +643,105 @@ $('openChangelogBtn').addEventListener('click', async () => {
 });
 $('closeChangelogModal').addEventListener('click', () => $('changelogModal').classList.remove('active'));
 
-// ---------- タブ切り替え ----------
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-    btn.classList.add('active'); $(btn.dataset.target).classList.add('active');
+// ============================================================
+// タブ並び替え機能
+// ============================================================
+async function loadTabOrder() {
+  try {
+    const snap = await getDoc(doc(db, `users/${currentUser.uid}/settings/appSettings`));
+    if (snap.exists() && Array.isArray(snap.data().tabOrder)) {
+      const saved = snap.data().tabOrder.filter(k => DEFAULT_TAB_ORDER.includes(k));
+      DEFAULT_TAB_ORDER.forEach(k => { if (!saved.includes(k)) saved.push(k); });
+      currentTabOrder = saved;
+    } else {
+      currentTabOrder = [...DEFAULT_TAB_ORDER];
+    }
+  } catch (e) {
+    currentTabOrder = [...DEFAULT_TAB_ORDER];
+  }
+  buildMainNav();
+  renderTabOrderList();
+}
+
+// メインナビをtabOrderの順序で動的生成する。
+// 【重要】並び替え操作を行うたびに再構築されるが、常に先頭タブへ
+// 強制的に切り替えてしまうと「設定タブを操作しているのに車両タブへ
+// 飛ばされる」というUX上の欠陥になる。そのためactiveTabKeyで
+// 現在表示中のタブを保持し、再構築後も同じタブが表示されるようにする。
+function buildMainNav() {
+  const nav = $('mainTabNav');
+  nav.innerHTML = '';
+  if (!activeTabKey || !currentTabOrder.includes(activeTabKey)) {
+    activeTabKey = currentTabOrder[0];
+  }
+  currentTabOrder.forEach((key) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn flex-1 py-2 rounded-lg transition text-xs sm:text-sm font-semibold';
+    btn.dataset.target = `tab-${key}`;
+    btn.textContent = TAB_LABELS[key] || key;
+    if (key === activeTabKey) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      activeTabKey = key;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      $(`tab-${key}`).classList.add('active');
+    });
+    nav.appendChild(btn);
   });
-});
-document.querySelectorAll('.maintSub').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    $('maintListActive').classList.toggle('hidden', btn.dataset.status !== 'active');
-    $('maintListDone').classList.toggle('hidden', btn.dataset.status !== 'done');
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  $(`tab-${activeTabKey}`).classList.add('active');
+}
+
+function renderTabOrderList() {
+  const listEl = $('tabOrderList');
+  listEl.innerHTML = '';
+  currentTabOrder.forEach((key, idx) => {
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-2 py-2';
+    li.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <button class="sort-btn tabUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
+        <button class="sort-btn tabDown" data-idx="${idx}" ${idx===currentTabOrder.length-1?'disabled':''}>▼</button>
+      </div>
+      <span class="flex-1 font-semibold text-sm">${TAB_LABELS[key]||key}</span>`;
+    listEl.appendChild(li);
   });
-});
-document.querySelectorAll('.detail-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
-    btn.classList.add('active'); $(btn.dataset.dtarget).classList.remove('hidden');
+  listEl.querySelectorAll('.tabUp').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx);
+      if (idx === 0) return;
+      [currentTabOrder[idx-1], currentTabOrder[idx]] = [currentTabOrder[idx], currentTabOrder[idx-1]];
+      await saveTabOrder();
+    });
   });
+  listEl.querySelectorAll('.tabDown').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx);
+      if (idx === currentTabOrder.length - 1) return;
+      [currentTabOrder[idx], currentTabOrder[idx+1]] = [currentTabOrder[idx+1], currentTabOrder[idx]];
+      await saveTabOrder();
+    });
+  });
+}
+
+async function saveTabOrder() {
+  await setDoc(doc(db, `users/${currentUser.uid}/settings/appSettings`),
+    { tabOrder: currentTabOrder }, { merge: true });
+  buildMainNav();
+  renderTabOrderList();
+  showToast('タブの順序を保存しました');
+}
+
+$('resetTabOrderBtn').addEventListener('click', async () => {
+  currentTabOrder = [...DEFAULT_TAB_ORDER];
+  await saveTabOrder();
+  showToast('初期の並び順に戻しました');
 });
 
 // ============================================================
-// カテゴリ・店舗マスタ（並び替え対応・既存データの安全な移行付き）
+// カテゴリ・店舗マスタ
 // ============================================================
-
-// カテゴリマスタの読み込み。
-// 【重要】既存バージョンで登録済みのカテゴリにはsortOrderフィールドが
-// 存在しないため、単純に「sortOrderで検索して0件なら初期投入」という
-// ロジックにすると、Firestoreの仕様（orderByは対象フィールドを持たない
-// ドキュメントを除外する）により既存データが重複投入されてしまう。
-// そのため、まず無条件で全件を取得し、状況に応じて
-// 「本当に空なら初期投入」「一部・全部にsortOrderがなければ後付けで移行」
-// の2パターンに分けて処理する。
 async function loadCategories() {
   const colRef = collection(db, `users/${currentUser.uid}/categories`);
   let allSnap = await getDocs(colRef);
@@ -692,7 +814,6 @@ function renderCategoryList() {
   });
 }
 
-// カテゴリ・店舗共通：隣接する2件のsortOrderを入れ替える
 async function swapSortOrder(colName, cache, idxA, idxB) {
   const a = cache[idxA], b = cache[idxB];
   const tmpOrder = a.sortOrder;
@@ -711,9 +832,6 @@ function renderCategorySelects() {
   if (prev) sel.value = prev;
 }
 
-// メンテ完了時のチェックリストを、作業カテゴリマスタから動的に生成する。
-// これにより「カテゴリを追加する」だけでチェックリストにも自動反映され、
-// 別々に管理する必要がなくなる。
 function renderWorkChecklist(checkedItems = []) {
   const container = $('workChecklist');
   if (!container) return;
@@ -737,7 +855,6 @@ $('addCategoryBtn').addEventListener('click', async () => {
   await loadCategories();
 });
 
-// 店舗マスタの読み込み（カテゴリと同じ考え方で安全に移行する）
 async function loadShops() {
   const colRef = collection(db, `users/${currentUser.uid}/shops`);
   let allSnap = await getDocs(colRef);
@@ -795,9 +912,8 @@ function renderShopList() {
   });
 }
 
-// メンテモーダル・チケットモーダルの両方の店舗プルダウンを更新
 function renderShopSelects() {
-  [$('mShop'), $('tShopSelect')].forEach(sel => {
+  [$('mShop'), $('tShopSelect'), $('fShopSelect')].forEach(sel => {
     if (!sel) return;
     const prev = sel.value;
     sel.innerHTML = '<option value="">店舗を選択</option>';
@@ -815,11 +931,13 @@ $('addShopBtn').addEventListener('click', async () => {
   await addDoc(collection(db, `users/${currentUser.uid}/shops`), {
     name, tel: $('newShopTel').value.trim(), sortOrder: maxOrder + 1, createdAt: serverTimestamp()
   });
-  $('newShopName').value=''; $('newShopTel').value='';
+  $('newShopName').value = ''; $('newShopTel').value = '';
   await loadShops();
 });
 
-// ---------- 車両詳細モーダル ----------
+// ============================================================
+// 車両詳細モーダル
+// ============================================================
 function openDetailModal(carId, carData) {
   currentDetailCarData = { id: carId, ...carData };
   $('detailCarName').textContent = carData.nickname;
@@ -842,6 +960,7 @@ function openDetailModal(carId, carData) {
   $('ins-policy').textContent = ins.policyNo||'-'; $('ins-grade').textContent = ins.grade||'-';
   $('ins-condition').textContent = ins.condition||'-'; $('ins-staff').textContent = ins.staffName||'-';
   $('ins-memo').textContent = ins.memo||'-'; $('ins-agency').textContent = ins.agencyName||'-';
+  $('ins-annual-fee').textContent = ins.annualFee ? `¥${Number(ins.annualFee).toLocaleString()}` : '未登録';
   const insTel = ins.staffTel||'';
   $('ins-tel-link').href = insTel ? `tel:${insTel}` : '#'; $('ins-tel-text').textContent = insTel||'未登録';
   const insAgencyTel = ins.agencyTel||'';
@@ -879,6 +998,18 @@ function openDetailModal(carId, carData) {
 }
 $('closeDetailModal').addEventListener('click', () => $('carDetailModal').classList.remove('active'));
 
+document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
+    btn.classList.add('active');
+    $(btn.dataset.dtarget).classList.remove('hidden');
+    if (btn.dataset.dtarget === 'dtab-analysis' && currentDetailCarData) {
+      loadAnalysis(currentDetailCarData.id, currentDetailCarData);
+    }
+  });
+});
+
 $('editCarBtn').addEventListener('click', () => {
   if (!currentDetailCarData) return;
   const c = currentDetailCarData; const sp = c.specs||{};
@@ -898,7 +1029,8 @@ $('editInsBtn').addEventListener('click', () => {
   const ins = currentDetailCarData.insurance||{}; const jibai = currentDetailCarData.jibaiInsurance||{};
   $('insCarDocId').value = currentDetailCarData.id;
   $('iCompany').value=ins.company||''; $('iPolicy').value=ins.policyNo||''; $('iGrade').value=ins.grade||'';
-  $('iCondition').value=ins.condition||''; $('iStaff').value=ins.staffName||''; $('iTel').value=ins.staffTel||'';
+  $('iCondition').value=ins.condition||''; $('iAnnualFee').value=ins.annualFee||'';
+  $('iStaff').value=ins.staffName||''; $('iTel').value=ins.staffTel||'';
   $('iAgency').value=ins.agencyName||''; $('iAgencyTel').value=ins.agencyTel||'';
   $('iExpiry').value=ins.expiry||''; $('iMemo').value=ins.memo||'';
   $('jPolicy').value=jibai.policyNo||''; $('jStart').value=jibai.start||''; $('jExpiry').value=jibai.expiry||'';
@@ -909,7 +1041,8 @@ $('saveInsBtn').addEventListener('click', async () => {
   const docId = $('insCarDocId').value; if (!docId) return;
   await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), {
     insurance: { company:$('iCompany').value, policyNo:$('iPolicy').value, grade:$('iGrade').value,
-      condition:$('iCondition').value, staffName:$('iStaff').value, staffTel:$('iTel').value,
+      condition:$('iCondition').value, annualFee: Number($('iAnnualFee').value)||0,
+      staffName:$('iStaff').value, staffTel:$('iTel').value,
       agencyName:$('iAgency').value, agencyTel:$('iAgencyTel').value, expiry:$('iExpiry').value, memo:$('iMemo').value },
     jibaiInsurance: { policyNo:$('jPolicy').value, start:$('jStart').value, expiry:$('jExpiry').value },
     updatedAt: serverTimestamp()
@@ -936,7 +1069,9 @@ $('saveTireBtn').addEventListener('click', async () => {
   showToast('タイヤ情報を保存しました'); $('tireModal').classList.remove('active'); await loadCars();
 });
 
-// ---------- チケット管理（購入店舗はマスタ選択＋自由入力） ----------
+// ============================================================
+// チケット管理
+// ============================================================
 $('addTicketBtn').addEventListener('click', () => {
   if (!currentDetailCarData) return;
   $('ticketCarDocId').value = currentDetailCarData.id;
@@ -953,7 +1088,6 @@ $('saveTicketBtn').addEventListener('click', async () => {
   const name = $('tName').value.trim();
   const total = parseInt($('tTotal').value)||0;
   if (!name || total <= 0) return alert('パック名と枚数(1以上)を入力してください');
-  // マスタ選択を優先し、未選択なら自由入力欄の値を使う
   const shop = $('tShopSelect').value || $('tShopFree').value.trim();
   await addDoc(collection(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`), {
     name, total, remaining: total,
@@ -1027,7 +1161,158 @@ async function loadTicketList(carId) {
   });
 }
 
-// ---------- 車両管理 ----------
+// ============================================================
+// 分析タブ（Chart.js）
+// ============================================================
+async function loadAnalysis(carId, carData) {
+  const [fuelSnap, maintSnap, ticketSnap] = await Promise.all([
+    getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/fuelLogs`), orderBy('date','asc'))),
+    getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/maintenanceLogs`), orderBy('createdAt','asc'))),
+    getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`), orderBy('createdAt','asc')))
+  ]);
+
+  const now = new Date();
+  const oneYearAgo = new Date(now.getFullYear()-1, now.getMonth(), now.getDate());
+
+  const monthLabels = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    monthLabels.push(`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`);
+  }
+  const monthlyFuel = new Array(12).fill(0);
+  const monthlyMaint = new Array(12).fill(0);
+  const monthlyTicket = new Array(12).fill(0);
+
+  let totalFuel = 0, totalMaint = 0, totalTicket = 0;
+
+  fuelSnap.forEach(d => {
+    const f = d.data();
+    if (!f.date || !f.amount) return;
+    const fDate = new Date(f.date);
+    if (fDate >= oneYearAgo) {
+      totalFuel += f.amount;
+      const label = `${fDate.getFullYear()}/${String(fDate.getMonth()+1).padStart(2,'0')}`;
+      const idx = monthLabels.indexOf(label);
+      if (idx !== -1) monthlyFuel[idx] += f.amount;
+    }
+  });
+
+  maintSnap.forEach(d => {
+    const m = d.data();
+    if (m.status !== '完了' || !m.completedDate || !m.actualCost) return;
+    const mDate = new Date(m.completedDate);
+    if (mDate >= oneYearAgo) {
+      totalMaint += m.actualCost;
+      const label = `${mDate.getFullYear()}/${String(mDate.getMonth()+1).padStart(2,'0')}`;
+      const idx = monthLabels.indexOf(label);
+      if (idx !== -1) monthlyMaint[idx] += m.actualCost;
+    }
+  });
+
+  ticketSnap.forEach(d => {
+    const t = d.data();
+    if (!t.buyDate || !t.cost) return;
+    const tDate = new Date(t.buyDate);
+    if (tDate >= oneYearAgo) {
+      totalTicket += t.cost;
+      const label = `${tDate.getFullYear()}/${String(tDate.getMonth()+1).padStart(2,'0')}`;
+      const idx = monthLabels.indexOf(label);
+      if (idx !== -1) monthlyTicket[idx] += t.cost;
+    }
+  });
+
+  const annualFee = Number(carData.insurance?.annualFee)||0;
+  const totalAll = totalFuel + totalMaint + totalTicket + annualFee;
+
+  const summaryEl = $('analysisSummaryCards');
+  summaryEl.innerHTML = `
+    <div class="col-span-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-2xl shadow">
+      <p class="text-blue-200 text-xs mb-1">💰 直近1年間の維持費合計</p>
+      <p class="text-3xl font-black">¥${totalAll.toLocaleString()}</p>
+    </div>
+    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+      <p class="text-xs text-slate-400">⛽ 給油費</p>
+      <p class="font-black text-blue-700 text-lg">¥${totalFuel.toLocaleString()}</p>
+    </div>
+    <div class="bg-green-50 p-3 rounded-xl border border-green-100">
+      <p class="text-xs text-slate-400">🔧 メンテ費</p>
+      <p class="font-black text-green-700 text-lg">¥${totalMaint.toLocaleString()}</p>
+    </div>
+    <div class="bg-purple-50 p-3 rounded-xl border border-purple-100">
+      <p class="text-xs text-slate-400">🎫 チケット</p>
+      <p class="font-black text-purple-700 text-lg">¥${totalTicket.toLocaleString()}</p>
+    </div>
+    <div class="bg-orange-50 p-3 rounded-xl border border-orange-100">
+      <p class="text-xs text-slate-400">🛡️ 保険料</p>
+      <p class="font-black text-orange-700 text-lg">¥${annualFee.toLocaleString()}</p>
+    </div>`;
+
+  if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
+  chartMonthly = new Chart($('monthlyChart'), {
+    type: 'bar',
+    data: {
+      labels: monthLabels.map(l => l.slice(5)),
+      datasets: [
+        { label:'給油', data: monthlyFuel, backgroundColor:'rgba(59,130,246,0.8)', stack:'cost' },
+        { label:'メンテ', data: monthlyMaint, backgroundColor:'rgba(34,197,94,0.8)', stack:'cost' },
+        { label:'チケット', data: monthlyTicket, backgroundColor:'rgba(168,85,247,0.8)', stack:'cost' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend:{ position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } },
+      scales: {
+        x: { stacked:true, ticks:{ font:{size:9} } },
+        y: { stacked:true, ticks:{ font:{size:9}, callback: v => `¥${(v/1000).toFixed(0)}k` } }
+      }
+    }
+  });
+
+  if (chartDonut) { chartDonut.destroy(); chartDonut = null; }
+  const donutData = [totalFuel, totalMaint, totalTicket, annualFee];
+  const donutLabels = ['給油','メンテ','チケット','保険料'];
+  const donutColors = ['rgba(59,130,246,0.85)','rgba(34,197,94,0.85)','rgba(168,85,247,0.85)','rgba(251,146,60,0.85)'];
+  chartDonut = new Chart($('donutChart'), {
+    type: 'doughnut',
+    data: { labels: donutLabels, datasets: [{ data: donutData, backgroundColor: donutColors, borderWidth:2 }] },
+    options: { responsive: true, maintainAspectRatio: true, plugins: { legend:{ display:false } }, cutout: '65%' }
+  });
+  const legendEl = $('donutLegend');
+  legendEl.innerHTML = donutLabels.map((label, i) => {
+    const pct = totalAll > 0 ? Math.round((donutData[i]/totalAll)*100) : 0;
+    return `<div class="flex items-center gap-1.5">
+      <span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${donutColors[i]}"></span>
+      <span>${label}</span>
+      <span class="ml-auto font-bold">¥${donutData[i].toLocaleString()}</span>
+      <span class="text-slate-400">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  if (chartEfficiency) { chartEfficiency.destroy(); chartEfficiency = null; }
+  const effData = [];
+  fuelSnap.forEach(d => { const f=d.data(); if(f.efficiency) effData.push({ date:f.date, eff:f.efficiency }); });
+  const recent20 = effData.slice(-20);
+  chartEfficiency = new Chart($('efficiencyChart'), {
+    type: 'line',
+    data: {
+      labels: recent20.map(e => e.date.slice(5)),
+      datasets: [{
+        label: '燃費(km/L)', data: recent20.map(e => e.eff),
+        borderColor:'rgba(59,130,246,1)', backgroundColor:'rgba(59,130,246,0.1)',
+        tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'rgba(59,130,246,1)'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: true,
+      plugins: { legend:{ display:false } },
+      scales: { x: { ticks:{ font:{size:9} } }, y: { ticks:{ font:{size:9}, callback: v => `${v}km/L` }, beginAtZero:false } }
+    }
+  });
+}
+
+// ============================================================
+// 車両管理
+// ============================================================
 $('addCarBtn').addEventListener('click', () => {
   $('carDocId').value=''; $('carModalTitle').textContent='車両情報を登録';
   document.querySelectorAll('#carModal input:not([type=hidden]), #carModal select').forEach(i=>i.value='');
@@ -1090,181 +1375,306 @@ async function loadCars() {
     div.addEventListener('click',()=>openDetailModal(d.id,c));
     list.appendChild(div);
   });
-  if ($('globalCarSelect').value) { currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); }
+    if ($('globalCarSelect').value) { currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); }
 }
 $('globalCarSelect').addEventListener('change',()=>{ currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); });
 
-// ---------- レシートOCR ----------
+// ============================================================
+// レシートOCR（店舗名の2段階推測ロジック付き）
+// ============================================================
 async function scanReceipt(file) {
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const img=new Image();
-      img.onload=async()=>{
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = async () => {
         try {
-          const canvas=document.createElement('canvas');
-          const scale=Math.min(1200/img.width,1);
-          canvas.width=img.width*scale; canvas.height=img.height*scale;
-          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
-          const {data:{text}}=await Tesseract.recognize(canvas.toDataURL('image/jpeg',0.85),'jpn+eng');
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(1200 / img.width, 1);
+          canvas.width = img.width * scale; canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const { data: { text } } = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 0.85), 'jpn+eng');
           resolve(text);
-        } catch(err){reject(err);}
+        } catch (err) { reject(err); }
       };
-      img.onerror=reject; img.src=e.target.result;
+      img.onerror = reject; img.src = e.target.result;
     };
-    reader.onerror=reject; reader.readAsDataURL(file);
+    reader.onerror = reject; reader.readAsDataURL(file);
   });
 }
+
+// 店舗名を「①店舗マスタとの部分一致 → ②主要ブランドのキーワード検出」の
+// 2段階で推測する。マスタに登録済みの店なら最優先でそれを使い、
+// 未登録のガソリンスタンドチェーンでもある程度は自動推測できるようにする。
+function guessShopName(text) {
+  const upper = text.toUpperCase();
+  for (const shop of cachedShops) {
+    if (shop.name && upper.includes(shop.name.toUpperCase())) return shop.name;
+  }
+  const brandKeywords = [
+    { keywords: ['ENEOS','エネオス'], label: 'ENEOS' },
+    { keywords: ['出光','IDEMITSU','APOLLOSTATION','アポロ'], label: '出光' },
+    { keywords: ['コスモ','COSMO'], label: 'コスモ石油' },
+    { keywords: ['昭和シェル','SHOWA','シェル','SHELL'], label: '昭和シェル' },
+    { keywords: ['エッソ','ESSO','モービル','MOBIL'], label: 'エッソ/モービル' },
+    { keywords: ['キグナス','KYGNUS'], label: 'キグナス石油' },
+  ];
+  for (const brand of brandKeywords) {
+    if (brand.keywords.some(kw => upper.includes(kw.toUpperCase()))) return brand.label;
+  }
+  return '';
+}
+
 function parseReceiptText(text) {
-  const result={};
-  const dateMatch=text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
-  if (dateMatch) result.date=`${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
-  const litersMatch=text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
-  if (litersMatch) result.liters=parseFloat(litersMatch[1]);
-  let amountMatch=text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
-  if (!amountMatch) amountMatch=text.match(/[¥￥]\s*([\d,]{3,7})/);
-  if (amountMatch) result.amount=parseInt(amountMatch[1].replace(/,/g,''),10);
+  const result = {};
+  const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
+  if (dateMatch) result.date = `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
+  const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
+  if (litersMatch) result.liters = parseFloat(litersMatch[1]);
+  let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
+  if (!amountMatch) amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
+  if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g,''), 10);
+  const shop = guessShopName(text);
+  if (shop) result.shop = shop;
   return result;
 }
-$('scanReceiptBtn').addEventListener('click',()=>$('fReceiptScan').click());
-$('fReceiptScan').addEventListener('change',async e=>{
-  const file=e.target.files[0]; if(!file) return;
-  const statusEl=$('scanStatus');
-  statusEl.textContent='🔍 読み取り中…（10〜20秒ほどかかります）';
-  statusEl.classList.remove('hidden'); $('scanReceiptBtn').disabled=true;
+
+// 給油量・金額の入力に連動してリアルタイムで単価（円/L）を計算・表示する。
+// ドキュメント例の「@¥165/L」表記に合わせて整数（円単位）で丸める。
+function updateUnitPriceDisplay() {
+  const liters = parseFloat($('fLiters').value);
+  const price = parseFloat($('fPrice').value);
+  const display = $('fUnitPriceDisplay');
+  if (liters > 0 && price > 0) {
+    display.textContent = `${Math.round(price / liters)} 円/L`;
+  } else {
+    display.textContent = '- 円/L';
+  }
+}
+$('fLiters').addEventListener('input', updateUnitPriceDisplay);
+$('fPrice').addEventListener('input', updateUnitPriceDisplay);
+
+$('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
+$('fReceiptScan').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const statusEl = $('scanStatus');
+  statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
+  statusEl.classList.remove('hidden'); $('scanReceiptBtn').disabled = true;
   try {
-    const parsed=parseReceiptText(await scanReceipt(file));
-    if(parsed.date) $('fDate').value=parsed.date;
-    if(parsed.liters) $('fLiters').value=parsed.liters;
-    if(parsed.amount) $('fPrice').value=parsed.amount;
-    statusEl.textContent=(parsed.date||parsed.liters||parsed.amount)
-      ?'✅ 読み取り完了。内容を確認・修正してから記録追加してください':'⚠️ うまく読み取れませんでした。手動で入力してください';
-  } catch(err){statusEl.textContent='❌ 読み取りに失敗しました。手動で入力してください';}
-  finally{$('scanReceiptBtn').disabled=false; e.target.value='';}
+    const parsed = parseReceiptText(await scanReceipt(file));
+    if (parsed.date) $('fDate').value = parsed.date;
+    if (parsed.liters) $('fLiters').value = parsed.liters;
+    if (parsed.amount) $('fPrice').value = parsed.amount;
+    updateUnitPriceDisplay();
+    // マスタ一致ならプルダウンへ、一致しなければ自由入力欄へ反映
+    if (parsed.shop) {
+      const matched = cachedShops.find(s => s.name === parsed.shop);
+      if (matched) { $('fShopSelect').value = parsed.shop; $('fShopFree').value = ''; }
+      else { $('fShopSelect').value = ''; $('fShopFree').value = parsed.shop; }
+    }
+    const detected = parsed.date || parsed.liters || parsed.amount || parsed.shop;
+    statusEl.textContent = detected
+      ? `✅ 読み取り完了${parsed.shop ? '（店舗: ' + parsed.shop + '）' : ''}。内容を確認・修正してから記録追加してください`
+      : '⚠️ うまく読み取れませんでした。手動で入力してください';
+  } catch (err) {
+    statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
+  } finally {
+    $('scanReceiptBtn').disabled = false; e.target.value = '';
+  }
 });
 
-// ---------- 給油記録 ----------
-$('saveFuelBtn').addEventListener('click',async()=>{
-  if(!currentCarId) return alert('先に車両を選択してください');
-  const date=$('fDate').value, odo=Number($('fOdo').value), liters=Number($('fLiters').value), price=Number($('fPrice').value);
-  const isFull=$('fFull').checked;
-  if(!date||!odo||!liters) return alert('日付・走行距離・給油量は必須です');
-  const prevSnap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('odometer','desc')));
-  let efficiency=null;
-  if(!prevSnap.empty){
-    const prev=prevSnap.docs[0].data();
-    if(isFull&&prev.fullTank&&odo>prev.odometer){
-      efficiency=Math.round(((odo-prev.odometer)/liters)*10)/10;
+// ============================================================
+// 給油記録
+// ============================================================
+$('saveFuelBtn').addEventListener('click', async () => {
+  if (!currentCarId) return alert('先に車両を選択してください');
+  const date = $('fDate').value;
+  const odo = Number($('fOdo').value);
+  const liters = Number($('fLiters').value);
+  const price = Number($('fPrice').value);
+  const isFull = $('fFull').checked;
+  if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
+
+  const unitPrice = (liters > 0 && price > 0) ? Math.round(price / liters) : null;
+  // 店舗名はプルダウン選択を優先し、未選択なら自由入力欄の値を使う
+  const shop = $('fShopSelect').value || $('fShopFree').value.trim();
+
+  const prevSnap = await getDocs(query(
+    collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),
+    orderBy('odometer','desc')
+  ));
+  let efficiency = null;
+  if (!prevSnap.empty) {
+    const prev = prevSnap.docs[0].data();
+    if (isFull && prev.fullTank && odo > prev.odometer) {
+      efficiency = Math.round(((odo - prev.odometer) / liters) * 10) / 10;
     }
   }
-  await addDoc(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),{
-    date, odometer:odo, liters, amount:price, fullTank:isFull, efficiency, createdAt:serverTimestamp()
+  await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
+    date, odometer: odo, liters, amount: price, unitPrice, shop,
+    fullTank: isFull, efficiency, createdAt: serverTimestamp()
   });
-  await updateDoc(doc(db,`users/${currentUser.uid}/cars`,currentCarId),{odo});
+  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
+
   $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
+  $('fShopSelect').value=''; $('fShopFree').value='';
+  $('fUnitPriceDisplay').textContent = '- 円/L';
   $('scanStatus').classList.add('hidden');
   showToast('給油記録を追加しました'); loadFuel(); loadCars();
 });
 
 async function loadFuel() {
-  if(!currentCarId) return;
-  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('date','desc')));
-  const list=$('fuelList'); list.innerHTML='';
-  if(snap.empty){$('fuelSummary').classList.add('hidden'); list.innerHTML='<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>'; return;}
-  const effs=[];
-  snap.forEach(d=>{const f=d.data(); if(f.efficiency) effs.push(f.efficiency);});
-  if(effs.length){
+  if (!currentCarId) return;
+  const snap = await getDocs(query(
+    collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),
+    orderBy('date','desc')
+  ));
+  const list = $('fuelList'); list.innerHTML = '';
+  if (snap.empty) {
+    $('fuelSummary').classList.add('hidden');
+    list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>';
+    return;
+  }
+
+  const effs = [];
+  snap.forEach(d => { const f = d.data(); if (f.efficiency) effs.push(f.efficiency); });
+  if (effs.length) {
     $('fuelSummary').classList.remove('hidden');
-    $('fuel-avg').textContent=(effs.reduce((a,b)=>a+b,0)/effs.length).toFixed(1);
-    $('fuel-latest').textContent=effs[0];
-    $('fuel-best').textContent=Math.max(...effs);
-    $('fuel-worst').textContent=Math.min(...effs);
-  } else {$('fuelSummary').classList.add('hidden');}
-  snap.forEach(d=>{
-    const f=d.data();
-    const effBadge=f.efficiency?`<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>`:`<span class="text-xs text-slate-400">${f.fullTank?'算出不可':'部分給油'}</span>`;
-    const div=document.createElement('div');
-    div.className='bg-white p-3 rounded-xl shadow-sm text-sm';
-    div.innerHTML=`
+    $('fuel-avg').textContent = (effs.reduce((a,b) => a+b, 0) / effs.length).toFixed(1);
+    $('fuel-latest').textContent = effs[0];
+    $('fuel-best').textContent = Math.max(...effs);
+    $('fuel-worst').textContent = Math.min(...effs);
+  } else {
+    $('fuelSummary').classList.add('hidden');
+  }
+
+  snap.forEach(d => {
+    const f = d.data();
+    // unitPriceがあればそれを使い、旧データ（フィールド未存在）は
+    // 金額÷給油量でその場で計算してフォールバック表示する。
+    // 「0」と「未定義」を区別するため ?? を使用。
+    const up = f.unitPrice ?? (f.amount && f.liters ? Math.round(f.amount / f.liters) : null);
+    const unitPriceText = up ? `<span class="text-xs text-slate-500">@¥${up}/L</span>` : '';
+    const effBadge = f.efficiency
+      ? `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>`
+      : `<span class="text-xs text-slate-400">${f.fullTank ? '算出不可' : '部分給油'}</span>`;
+    const shopBadge = f.shop ? `<span class="text-xs text-slate-400">🏪 ${f.shop}</span>` : '';
+
+    const div = document.createElement('div');
+    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm';
+    div.innerHTML = `
       <div class="flex justify-between items-start">
-        <div><p class="font-bold">${f.date}${f.fullTank?' <span class="text-xs text-slate-400">満タン</span>':''}</p>
-        <p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${f.amount.toLocaleString()}</p></div>
+        <div>
+          <p class="font-bold">${f.date}${f.fullTank ? ' <span class="text-xs text-slate-400">満タン</span>' : ''}</p>
+          <p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${f.amount.toLocaleString()}</p>
+          <div class="flex items-center gap-2 mt-0.5">${unitPriceText}${shopBadge}</div>
+        </div>
         <div class="flex items-center gap-2">${effBadge}<button class="delFuelBtn text-red-400 text-xl leading-none" data-id="${d.id}">×</button></div>
       </div>`;
     list.appendChild(div);
   });
-  list.querySelectorAll('.delFuelBtn').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      if(!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`,btn.dataset.id));
+
+  list.querySelectorAll('.delFuelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
       loadFuel();
     });
   });
 }
 
-// ---------- メンテナンス（作業チェックリストはカテゴリマスタと連動・完了時備考を分離） ----------
-$('addMaintBtn').addEventListener('click',()=>{
-  if(!currentCarId) return alert('先に車両を選択してください');
-  $('maintDocId').value='';
-  document.querySelectorAll('#maintModal input:not([type=hidden], [type=checkbox]), #maintModal select, #maintModal textarea').forEach(i=>i.value='');
+// ============================================================
+// メンテナンス（サブタブ切り替え含む）
+// ============================================================
+
+// 【重要】このハンドラは以前のリファクタ時に欠落し、
+// 「予約中・進行中」「完了済み」ボタンを押しても切り替わらない
+// 状態になっていた。今回のv1.2.0で正式に復元する。
+document.querySelectorAll('.maintSub').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    $('maintListActive').classList.toggle('hidden', btn.dataset.status !== 'active');
+    $('maintListDone').classList.toggle('hidden', btn.dataset.status !== 'done');
+  });
+});
+
+$('addMaintBtn').addEventListener('click', () => {
+  if (!currentCarId) return alert('先に車両を選択してください');
+  $('maintDocId').value = '';
+  document.querySelectorAll('#maintModal input:not([type=hidden], [type=checkbox]), #maintModal select, #maintModal textarea')
+    .forEach(i => i.value = '');
   renderWorkChecklist([]);
   $('maintModal').classList.add('active');
 });
-$('closeMaintModal').addEventListener('click',()=>$('maintModal').classList.remove('active'));
+$('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
 
 async function saveMaint(status) {
-  if(!currentCarId) return alert('先に車両を選択してください');
-  const checkedWorks = [...document.querySelectorAll('.workCheckItem:checked')].map(cb=>cb.value);
-  const data={
-    status, category:$('mCategory').value, shopId:$('mShop').value, staffName:$('mStaff').value,
-    reservationDate:$('mResDate').value, reservationTime:$('mResTime').value, memo:$('mMemo').value,
-    completedDate:$('mDoneDate').value, completedOdo:Number($('mDoneOdo').value)||null,
-    actualCost:Number($('mCost').value)||null, workDetail:$('mWork').value,
-    checkedWorks, doneNote:$('mDoneNote').value,
-    nextScheduleDate:$('mNext').value,
-    updatedAt:serverTimestamp()
+  if (!currentCarId) return alert('先に車両を選択してください');
+  const checkedWorks = [...document.querySelectorAll('.workCheckItem:checked')].map(cb => cb.value);
+  const data = {
+    status, category: $('mCategory').value, shopId: $('mShop').value, staffName: $('mStaff').value,
+    reservationDate: $('mResDate').value, reservationTime: $('mResTime').value, memo: $('mMemo').value,
+    completedDate: $('mDoneDate').value, completedOdo: Number($('mDoneOdo').value)||null,
+    actualCost: Number($('mCost').value)||null, workDetail: $('mWork').value,
+    checkedWorks, doneNote: $('mDoneNote').value,
+    nextScheduleDate: $('mNext').value,
+    updatedAt: serverTimestamp()
   };
-  const docId=$('maintDocId').value;
-  const colRef=collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
-  if(docId){await updateDoc(doc(colRef,docId),data);}
-  else{data.createdAt=serverTimestamp(); await addDoc(colRef,data);}
-  showToast(status==='完了'?'完了記録を保存しました':'予約を保存しました');
+  const docId = $('maintDocId').value;
+  const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
+  if (docId) { await updateDoc(doc(colRef, docId), data); }
+  else { data.createdAt = serverTimestamp(); await addDoc(colRef, data); }
+  showToast(status === '完了' ? '完了記録を保存しました' : '予約を保存しました');
   $('maintModal').classList.remove('active'); loadMaint();
 }
-$('saveMaintReserveBtn').addEventListener('click',()=>saveMaint('予約済み'));
-$('saveMaintDoneBtn').addEventListener('click',()=>saveMaint('完了'));
+$('saveMaintReserveBtn').addEventListener('click', () => saveMaint('予約済み'));
+$('saveMaintDoneBtn').addEventListener('click', () => saveMaint('完了'));
 
 async function loadMaint() {
-  if(!currentCarId) return;
-  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`),orderBy('createdAt','desc')));
-  const activeList=$('maintListActive'), doneList=$('maintListDone');
-  activeList.innerHTML=''; doneList.innerHTML='';
-  let ac=0,dc=0;
-  snap.forEach(d=>{
-    const m=d.data();
-    const div=document.createElement('div');
-    div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    if(m.status==='完了'){
+  if (!currentCarId) return;
+  const snap = await getDocs(query(
+    collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`),
+    orderBy('createdAt','desc')
+  ));
+  const activeList = $('maintListActive'), doneList = $('maintListDone');
+  activeList.innerHTML = ''; doneList.innerHTML = '';
+  let ac = 0, dc = 0;
+
+  snap.forEach(d => {
+    const m = d.data();
+    const div = document.createElement('div');
+    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+
+    if (m.status === '完了') {
       dc++;
-      const worksHtml=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
-      div.innerHTML=`
+      const worksHtml = (m.checkedWorks||[])
+        .map(w => `<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`)
+        .join(' ');
+      div.innerHTML = `
         <p class="font-bold text-green-700">✅ ${m.category}</p>
-        <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0}${m.workDetail?' ／ '+m.workDetail:''}</p>
-        ${worksHtml?`<div class="flex flex-wrap gap-1 mt-1">${worksHtml}</div>`:''}
-        ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 ${m.doneNote}</p>`:''}
-        ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}
-        <div class="flex justify-end"><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
+        <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>
+        ${worksHtml ? `<div class="flex flex-wrap gap-1 mt-1">${worksHtml}</div>` : ''}
+        ${m.memo ? `<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>` : ''}
+        ${m.doneNote ? `<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>` : ''}
+        ${m.nextScheduleDate ? `<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>` : ''}
+        <div class="flex justify-end">
+          <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
+        </div>`;
       doneList.appendChild(div);
     } else {
       ac++;
-      const days=daysUntil(m.reservationDate);
-      div.innerHTML=`
+      const days = daysUntil(m.reservationDate);
+      const dayLabel = days !== null ? (days < 0 ? '期限超過' : `残り${days}日`) : '未予約';
+      div.innerHTML = `
         <div class="flex justify-between items-start">
-          <div><p class="font-bold">${m.category}</p>
-          <p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div>
-          <span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span>
+          <div>
+            <p class="font-bold">${m.category}</p>
+            <p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p>
+          </div>
+          <span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${dayLabel}</span>
         </div>
-        ${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}
+        ${m.memo ? `<p class="text-xs text-slate-400">📝 ${m.memo}</p>` : ''}
         <div class="flex gap-2 pt-1">
           <button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button>
           <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
@@ -1272,26 +1682,29 @@ async function loadMaint() {
       activeList.appendChild(div);
     }
   });
-  if(ac===0) activeList.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
-  if(dc===0) doneList.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
-  document.querySelectorAll('.editMaintBtn').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      const snap2=await getDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id));
-      const m=snap2.data();
-      $('maintDocId').value=btn.dataset.id;
-      $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
-      $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
-      $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
-      $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||'';
-      $('mNext').value=m.nextScheduleDate||''; $('mDoneNote').value=m.doneNote||'';
+
+  if (ac === 0) activeList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
+  if (dc === 0) doneList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
+
+  document.querySelectorAll('.editMaintBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
+      const m = snap2.data();
+      $('maintDocId').value = btn.dataset.id;
+      $('mCategory').value = m.category||''; $('mShop').value = m.shopId||''; $('mStaff').value = m.staffName||'';
+      $('mResDate').value = m.reservationDate||''; $('mResTime').value = m.reservationTime||''; $('mMemo').value = m.memo||'';
+      $('mDoneDate').value = m.completedDate||new Date().toISOString().slice(0,10);
+      $('mDoneOdo').value = m.completedOdo||''; $('mCost').value = m.actualCost||''; $('mWork').value = m.workDetail||'';
+      $('mNext').value = m.nextScheduleDate||''; $('mDoneNote').value = m.doneNote||'';
       renderWorkChecklist(m.checkedWorks||[]);
       $('maintModal').classList.add('active');
     });
   });
-  document.querySelectorAll('.delMaintBtn').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      if(!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id));
+
+  document.querySelectorAll('.delMaintBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
       loadMaint();
     });
   });
