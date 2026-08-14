@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<!-- CHANGELOGのMarkdownを綺麗なHTMLに変換するためのライブラリ -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   body { font-family: 'Noto Sans JP', sans-serif; }
@@ -21,12 +20,17 @@
   .modal.active { display: flex; }
   .fade-in { animation: fadeIn .2s ease-out; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
-  .markdown-body h1 { font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
-  .markdown-body h2 { font-size: 1.15rem; font-weight: bold; margin-top: 1.25rem; margin-bottom: 0.6rem; color: #1e40af; }
-  .markdown-body h3 { font-size: 1rem; font-weight: bold; margin-top: 0.9rem; margin-bottom: 0.4rem; }
-  .markdown-body ul { list-style-type: disc; padding-left: 1.4rem; margin-bottom: 0.8rem; }
-  .markdown-body li { margin-bottom: 0.3rem; }
-  .markdown-body p { margin-bottom: 0.8rem; line-height: 1.6; }
+  .markdown-body h1 { font-size:1.4rem; font-weight:bold; margin-bottom:1rem; border-bottom:2px solid #e2e8f0; padding-bottom:.5rem; }
+  .markdown-body h2 { font-size:1.15rem; font-weight:bold; margin-top:1.25rem; margin-bottom:.6rem; color:#1e40af; }
+  .markdown-body h3 { font-size:1rem; font-weight:bold; margin-top:.9rem; margin-bottom:.4rem; }
+  .markdown-body ul { list-style-type:disc; padding-left:1.4rem; margin-bottom:.8rem; }
+  .markdown-body li { margin-bottom:.3rem; }
+  .markdown-body p { margin-bottom:.8rem; line-height:1.6; }
+  .sort-btn { width:1.75rem; height:1.75rem; display:flex; align-items:center; justify-content:center;
+    border-radius:.4rem; font-size:.75rem; border:1px solid #e2e8f0; background:#f8fafc;
+    color:#64748b; cursor:pointer; flex-shrink:0; }
+  .sort-btn:hover { background:#e2e8f0; }
+  .sort-btn:disabled { opacity:.3; cursor:default; }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
@@ -80,7 +84,6 @@
       </div>
       <p class="text-center text-blue-200 text-xs mt-2">単位：km/L</p>
     </div>
-
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">⛽ 給油記録を追加</h3>
       <div class="grid grid-cols-2 gap-2 text-sm">
@@ -115,6 +118,7 @@
   <section id="tab-settings" class="tab-content space-y-3">
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🔧 作業カテゴリの管理</h3>
+      <p class="text-xs text-slate-400 -mt-2 mb-3">※ここに追加した項目は、メンテ完了時のチェックリストにも自動で反映されます</p>
       <div class="flex gap-2 mb-3">
         <input type="text" id="newCategoryName" placeholder="新しいカテゴリ名" class="border border-slate-300 p-2 rounded-lg flex-1 text-sm">
         <button id="addCategoryBtn" class="bg-blue-600 text-white px-4 rounded-lg font-bold text-sm">追加</button>
@@ -138,7 +142,6 @@
   </section>
 </main>
 
-<!-- CHANGELOG表示モーダル（GitHub画面を開かず、アプリ内だけで完結） -->
 <div id="changelogModal" class="modal fixed inset-0 z-50 bg-black/60 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
     <div class="bg-slate-800 text-white px-5 py-4 flex justify-between items-center flex-shrink-0">
@@ -153,7 +156,6 @@
   </div>
 </div>
 
-<!-- 車両詳細モーダル -->
 <div id="carDetailModal" class="modal fixed inset-0 z-50 bg-black/60 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
     <div class="bg-blue-700 text-white px-5 py-4 flex justify-between items-center flex-shrink-0">
@@ -278,7 +280,6 @@
   </div>
 </div>
 
-<!-- 車両追加/編集モーダル -->
 <div id="carModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
@@ -317,7 +318,6 @@
   </div>
 </div>
 
-<!-- 保険情報編集モーダル -->
 <div id="insModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
@@ -354,7 +354,6 @@
   </div>
 </div>
 
-<!-- タイヤ情報編集モーダル -->
 <div id="tireModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
@@ -386,7 +385,7 @@
   </div>
 </div>
 
-<!-- チケットパック追加モーダル -->
+<!-- チケットパック追加モーダル（購入店舗をマスタから選択＋自由入力の併用） -->
 <div id="ticketModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
@@ -400,39 +399,57 @@
       <input type="number" id="tCost" placeholder="購入金額(円)" class="border p-2.5 rounded-xl">
       <div><label class="text-xs text-slate-500 block mb-1">購入日</label><input type="date" id="tBuyDate" class="border p-2.5 rounded-xl w-full"></div>
       <div><label class="text-xs text-slate-500 block mb-1">有効期限（任意）</label><input type="date" id="tExpiry" class="border p-2.5 rounded-xl w-full"></div>
-      <input type="text" id="tShop" placeholder="購入店舗（任意）" class="border p-2.5 rounded-xl col-span-2">
+      <div class="col-span-2">
+        <label class="text-xs text-slate-500 block mb-1">購入店舗</label>
+        <select id="tShopSelect" class="border p-2.5 rounded-xl w-full mb-1">
+          <option value="">店舗マスタから選択</option>
+        </select>
+        <input type="text" id="tShopFree" placeholder="または直接入力（マスタにない場合）" class="border p-2.5 rounded-xl w-full text-xs">
+      </div>
       <button id="saveTicketBtn" class="col-span-2 bg-purple-600 text-white py-3 rounded-xl font-bold shadow">登録する</button>
     </div>
   </div>
 </div>
 
-<!-- メンテ追加/完了モーダル -->
+<!-- メンテ追加/完了モーダル（作業内容チェックリストはカテゴリマスタから自動生成・完了時備考を分離） -->
 <div id="maintModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
   <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
     <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
       <h2 class="font-bold text-lg">🔧 メンテナンス予約・記録</h2>
       <button id="closeMaintModal" class="text-2xl text-slate-400">&times;</button>
     </div>
-    <div class="p-5 grid grid-cols-2 gap-3 text-sm">
+    <div class="p-5 space-y-3 text-sm">
       <input type="hidden" id="maintDocId">
-      <select id="mCategory" class="border p-2.5 rounded-xl col-span-2"></select>
-      <select id="mShop" class="border p-2.5 rounded-xl col-span-2"></select>
-      <input type="text" id="mStaff" placeholder="担当者名" class="border p-2.5 rounded-xl col-span-2">
-      <div><label class="text-xs text-slate-500 block mb-1">予約日</label><input type="date" id="mResDate" class="border p-2.5 rounded-xl w-full"></div>
-      <div><label class="text-xs text-slate-500 block mb-1">予約時間</label><input type="time" id="mResTime" class="border p-2.5 rounded-xl w-full"></div>
-      <input type="text" id="mMemo" placeholder="備考" class="border p-2.5 rounded-xl col-span-2">
-      <div class="col-span-2 border-t pt-3">
-        <p class="text-xs text-slate-400 mb-2">↓ 完了時に入力（未実施なら空欄でOK）</p>
-        <div class="grid grid-cols-2 gap-2">
+      <select id="mCategory" class="border p-2.5 rounded-xl w-full"></select>
+      <select id="mShop" class="border p-2.5 rounded-xl w-full"></select>
+      <input type="text" id="mStaff" placeholder="担当者名" class="border p-2.5 rounded-xl w-full">
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="text-xs text-slate-500 block mb-1">予約日</label><input type="date" id="mResDate" class="border p-2.5 rounded-xl w-full"></div>
+        <div><label class="text-xs text-slate-500 block mb-1">予約時間</label><input type="time" id="mResTime" class="border p-2.5 rounded-xl w-full"></div>
+      </div>
+      <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
+
+      <div class="border-t pt-3">
+        <p class="text-xs font-bold text-slate-600 mb-2">↓ 完了時に入力（未実施なら空欄でOK）</p>
+        <div class="grid grid-cols-2 gap-2 mb-2">
           <div><label class="text-xs text-slate-500 block mb-1">実施日</label><input type="date" id="mDoneDate" class="border p-2.5 rounded-xl w-full"></div>
           <input type="number" id="mDoneOdo" placeholder="実施時ODO(km)" class="border p-2.5 rounded-xl">
           <input type="number" id="mCost" placeholder="実際の費用(円)" class="border p-2.5 rounded-xl">
-          <input type="text" id="mWork" placeholder="作業内容" class="border p-2.5 rounded-xl">
+          <input type="text" id="mWork" placeholder="作業内容（自由記入）" class="border p-2.5 rounded-xl">
           <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">次回予定日</label><input type="date" id="mNext" class="border p-2.5 rounded-xl w-full"></div>
         </div>
+
+        <div class="bg-green-50 border border-green-100 p-3 rounded-xl">
+          <p class="text-xs font-bold text-green-700 mb-2">✅ 実施した作業（複数選択可・カテゴリ管理と連動）</p>
+          <div id="workChecklist" class="grid grid-cols-2 gap-1"></div>
+        </div>
+        <textarea id="mDoneNote" placeholder="完了時の備考（気になった点・次回への申し送りなど）" class="border p-2.5 rounded-xl w-full h-20 resize-none text-xs mt-2"></textarea>
       </div>
-      <button id="saveMaintReserveBtn" class="bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-sm">予約として保存</button>
-      <button id="saveMaintDoneBtn" class="bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm">✅ 完了にする</button>
+
+      <div class="flex gap-2">
+        <button id="saveMaintReserveBtn" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-sm">予約として保存</button>
+        <button id="saveMaintDoneBtn" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm">✅ 完了にする</button>
+      </div>
     </div>
   </div>
 </div>
@@ -445,13 +462,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, doc, addDoc, getDoc, getDocs,
-  updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion
+  updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ★ アプリのバージョン。今後の更新のたびにこの1行を書き換えてください ★
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
-// ★ ご自身のFirebase設定に書き換えてください ★
 const firebaseConfig = {
   apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
   authDomain: "my-car-manager-daab9.firebaseapp.com",
@@ -467,6 +482,8 @@ const db = getFirestore(app);
 let currentUser = null;
 let currentCarId = null;
 let currentDetailCarData = null;
+let cachedCategories = [];
+let cachedShops = [];
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
@@ -506,7 +523,7 @@ function showToast(msg) {
   t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-5 py-2.5 rounded-full shadow-lg z-[100]';
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.4s'; setTimeout(() => t.remove(), 400); }, 2000);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.4s'; setTimeout(()=>t.remove(),400); }, 2000);
 }
 
 // ---------- 認証 ----------
@@ -544,33 +561,25 @@ onAuthStateChanged(auth, async user => {
   }
 });
 
-// ---------- CHANGELOG表示（GitHubの画面は開かず、アプリ内モーダルに整形表示） ----------
+// ---------- CHANGELOG表示 ----------
 $('openChangelogBtn').addEventListener('click', async () => {
   const contentEl = $('changelogContent');
   contentEl.innerHTML = '<p class="text-center text-slate-400 py-4">読み込み中...</p>';
   $('changelogModal').classList.add('active');
-
   try {
     const hostname = window.location.hostname;
-    let rawUrl = '';
+    let rawUrl = './CHANGELOG.md';
     if (hostname.endsWith('.github.io')) {
       const username = hostname.split('.')[0];
       const pathParts = window.location.pathname.split('/').filter(p => p && !p.includes('.'));
       const repo = pathParts.length > 0 ? pathParts[0] : `${username}.github.io`;
-      // ブランチ名は基本的に "main" を指定する。
-      // もしリポジトリのデフォルトブランチが "master" の場合は、
-      // 下記の 'main' の部分を 'master' に書き換えてください。
       rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/CHANGELOG.md`;
-    } else {
-      rawUrl = './CHANGELOG.md';
     }
     const res = await fetch(rawUrl + '?t=' + new Date().getTime());
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const text = await res.text();
-    contentEl.innerHTML = marked.parse(text);
+    contentEl.innerHTML = marked.parse(await res.text());
   } catch (err) {
-    console.error(err);
-    contentEl.innerHTML = '<p class="text-center text-red-500 py-4">変更履歴の読み込みに失敗しました。<br>ブランチ名（main/master）が正しいかご確認ください。</p>';
+    contentEl.innerHTML = '<p class="text-center text-red-500 py-4">変更履歴の読み込みに失敗しました。</p>';
   }
 });
 $('closeChangelogModal').addEventListener('click', () => $('changelogModal').classList.remove('active'));
@@ -597,6 +606,217 @@ document.querySelectorAll('.detail-tab-btn').forEach(btn => {
     document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
     btn.classList.add('active'); $(btn.dataset.dtarget).classList.remove('hidden');
   });
+});
+
+// ============================================================
+// カテゴリ・店舗マスタ（並び替え対応・既存データの安全な移行付き）
+// ============================================================
+
+// カテゴリマスタの読み込み。
+// 【重要】既存バージョンで登録済みのカテゴリにはsortOrderフィールドが
+// 存在しないため、単純に「sortOrderで検索して0件なら初期投入」という
+// ロジックにすると、Firestoreの仕様（orderByは対象フィールドを持たない
+// ドキュメントを除外する）により既存データが重複投入されてしまう。
+// そのため、まず無条件で全件を取得し、状況に応じて
+// 「本当に空なら初期投入」「一部・全部にsortOrderがなければ後付けで移行」
+// の2パターンに分けて処理する。
+async function loadCategories() {
+  const colRef = collection(db, `users/${currentUser.uid}/categories`);
+  let allSnap = await getDocs(colRef);
+
+  if (allSnap.empty) {
+    const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換",
+      "エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
+    const batch = writeBatch(db);
+    defaults.forEach((name, i) => { batch.set(doc(colRef), { name, sortOrder: i, createdAt: serverTimestamp() }); });
+    await batch.commit();
+    allSnap = await getDocs(colRef);
+  } else if (allSnap.docs.some(d => d.data().sortOrder === undefined)) {
+    const sorted = allSnap.docs.slice().sort((a, b) =>
+      (a.data().createdAt?.toMillis?.() || 0) - (b.data().createdAt?.toMillis?.() || 0));
+    const batch = writeBatch(db);
+    sorted.forEach((d, i) => { if (d.data().sortOrder === undefined) batch.update(doc(colRef, d.id), { sortOrder: i }); });
+    await batch.commit();
+    allSnap = await getDocs(colRef);
+  }
+
+  cachedCategories = allSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  renderCategoryList();
+  renderCategorySelects();
+  renderWorkChecklist();
+}
+
+function renderCategoryList() {
+  const listEl = $('categoryList');
+  listEl.innerHTML = '';
+  cachedCategories.forEach((cat, idx) => {
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-1.5 py-1.5';
+    li.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <button class="sort-btn catUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
+        <button class="sort-btn catDown" data-idx="${idx}" ${idx===cachedCategories.length-1?'disabled':''}>▼</button>
+      </div>
+      <input type="text" value="${cat.name}" data-id="${cat.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
+      <button class="catDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded" data-id="${cat.id}">削除</button>`;
+    listEl.appendChild(li);
+  });
+  listEl.querySelectorAll('.catUp').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx); if (idx === 0) return;
+      await swapSortOrder('categories', cachedCategories, idx, idx - 1);
+      await loadCategories();
+    });
+  });
+  listEl.querySelectorAll('.catDown').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx); if (idx === cachedCategories.length - 1) return;
+      await swapSortOrder('categories', cachedCategories, idx, idx + 1);
+      await loadCategories();
+    });
+  });
+  listEl.querySelectorAll('.catEditInput').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      if (!inp.value.trim()) return;
+      await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: inp.value.trim() });
+      await loadCategories();
+    });
+  });
+  listEl.querySelectorAll('.catDelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('このカテゴリを削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/categories`, btn.dataset.id));
+      await loadCategories();
+    });
+  });
+}
+
+// カテゴリ・店舗共通：隣接する2件のsortOrderを入れ替える
+async function swapSortOrder(colName, cache, idxA, idxB) {
+  const a = cache[idxA], b = cache[idxB];
+  const tmpOrder = a.sortOrder;
+  await updateDoc(doc(db, `users/${currentUser.uid}/${colName}`, a.id), { sortOrder: b.sortOrder });
+  await updateDoc(doc(db, `users/${currentUser.uid}/${colName}`, b.id), { sortOrder: tmpOrder });
+}
+
+function renderCategorySelects() {
+  const sel = $('mCategory');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">作業カテゴリを選択</option>';
+  cachedCategories.forEach(cat => {
+    const opt = document.createElement('option'); opt.value = cat.name; opt.textContent = cat.name;
+    sel.appendChild(opt);
+  });
+  if (prev) sel.value = prev;
+}
+
+// メンテ完了時のチェックリストを、作業カテゴリマスタから動的に生成する。
+// これにより「カテゴリを追加する」だけでチェックリストにも自動反映され、
+// 別々に管理する必要がなくなる。
+function renderWorkChecklist(checkedItems = []) {
+  const container = $('workChecklist');
+  if (!container) return;
+  container.innerHTML = '';
+  cachedCategories.forEach(cat => {
+    const label = document.createElement('label');
+    label.className = 'flex items-center gap-1.5 text-xs cursor-pointer py-0.5';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.value = cat.name; cb.className = 'workCheckItem w-4 h-4 accent-green-600';
+    if (checkedItems.includes(cat.name)) cb.checked = true;
+    label.appendChild(cb); label.append(cat.name);
+    container.appendChild(label);
+  });
+}
+
+$('addCategoryBtn').addEventListener('click', async () => {
+  const name = $('newCategoryName').value.trim(); if (!name) return;
+  const maxOrder = cachedCategories.length > 0 ? Math.max(...cachedCategories.map(c => c.sortOrder ?? 0)) : -1;
+  await addDoc(collection(db, `users/${currentUser.uid}/categories`), { name, sortOrder: maxOrder + 1, createdAt: serverTimestamp() });
+  $('newCategoryName').value = '';
+  await loadCategories();
+});
+
+// 店舗マスタの読み込み（カテゴリと同じ考え方で安全に移行する）
+async function loadShops() {
+  const colRef = collection(db, `users/${currentUser.uid}/shops`);
+  let allSnap = await getDocs(colRef);
+
+  if (!allSnap.empty && allSnap.docs.some(d => d.data().sortOrder === undefined)) {
+    const sorted = allSnap.docs.slice().sort((a, b) =>
+      (a.data().createdAt?.toMillis?.() || 0) - (b.data().createdAt?.toMillis?.() || 0));
+    const batch = writeBatch(db);
+    sorted.forEach((d, i) => { if (d.data().sortOrder === undefined) batch.update(doc(colRef, d.id), { sortOrder: i }); });
+    await batch.commit();
+    allSnap = await getDocs(colRef);
+  }
+
+  cachedShops = allSnap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  renderShopList();
+  renderShopSelects();
+}
+
+function renderShopList() {
+  const listEl = $('shopList');
+  listEl.innerHTML = '';
+  cachedShops.forEach((shop, idx) => {
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-1.5 py-1.5 text-sm';
+    li.innerHTML = `
+      <div class="flex flex-col gap-0.5">
+        <button class="sort-btn shopUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
+        <button class="sort-btn shopDown" data-idx="${idx}" ${idx===cachedShops.length-1?'disabled':''}>▼</button>
+      </div>
+      <span class="flex-1">${shop.name}（${shop.tel||'-'}）</span>
+      <button class="shopDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded" data-id="${shop.id}">削除</button>`;
+    listEl.appendChild(li);
+  });
+  listEl.querySelectorAll('.shopUp').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx); if (idx === 0) return;
+      await swapSortOrder('shops', cachedShops, idx, idx - 1);
+      await loadShops();
+    });
+  });
+  listEl.querySelectorAll('.shopDown').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const idx = parseInt(btn.dataset.idx); if (idx === cachedShops.length - 1) return;
+      await swapSortOrder('shops', cachedShops, idx, idx + 1);
+      await loadShops();
+    });
+  });
+  listEl.querySelectorAll('.shopDelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('この店舗を削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/shops`, btn.dataset.id));
+      await loadShops();
+    });
+  });
+}
+
+// メンテモーダル・チケットモーダルの両方の店舗プルダウンを更新
+function renderShopSelects() {
+  [$('mShop'), $('tShopSelect')].forEach(sel => {
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">店舗を選択</option>';
+    cachedShops.forEach(shop => {
+      const opt = document.createElement('option'); opt.value = shop.name; opt.textContent = shop.name;
+      sel.appendChild(opt);
+    });
+    if (prev) sel.value = prev;
+  });
+}
+
+$('addShopBtn').addEventListener('click', async () => {
+  const name = $('newShopName').value.trim(); if (!name) return;
+  const maxOrder = cachedShops.length > 0 ? Math.max(...cachedShops.map(s => s.sortOrder ?? 0)) : -1;
+  await addDoc(collection(db, `users/${currentUser.uid}/shops`), {
+    name, tel: $('newShopTel').value.trim(), sortOrder: maxOrder + 1, createdAt: serverTimestamp()
+  });
+  $('newShopName').value=''; $('newShopTel').value='';
+  await loadShops();
 });
 
 // ---------- 車両詳細モーダル ----------
@@ -654,7 +874,6 @@ function openDetailModal(carId, carData) {
   document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
   document.querySelector('[data-dtarget="dtab-basic"]').classList.add('active');
   $('dtab-basic').classList.remove('hidden');
-
   loadTicketList(carId);
   $('carDetailModal').classList.add('active');
 }
@@ -717,11 +936,12 @@ $('saveTireBtn').addEventListener('click', async () => {
   showToast('タイヤ情報を保存しました'); $('tireModal').classList.remove('active'); await loadCars();
 });
 
-// ---------- チケット管理 ----------
+// ---------- チケット管理（購入店舗はマスタ選択＋自由入力） ----------
 $('addTicketBtn').addEventListener('click', () => {
   if (!currentDetailCarData) return;
   $('ticketCarDocId').value = currentDetailCarData.id;
   document.querySelectorAll('#ticketModal input:not([type=hidden])').forEach(i => i.value = '');
+  $('tShopSelect').value = '';
   $('tBuyDate').value = new Date().toISOString().slice(0,10);
   $('carDetailModal').classList.remove('active'); $('ticketModal').classList.add('active');
 });
@@ -733,10 +953,12 @@ $('saveTicketBtn').addEventListener('click', async () => {
   const name = $('tName').value.trim();
   const total = parseInt($('tTotal').value)||0;
   if (!name || total <= 0) return alert('パック名と枚数(1以上)を入力してください');
+  // マスタ選択を優先し、未選択なら自由入力欄の値を使う
+  const shop = $('tShopSelect').value || $('tShopFree').value.trim();
   await addDoc(collection(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`), {
     name, total, remaining: total,
     cost: Number($('tCost').value)||0,
-    buyDate: $('tBuyDate').value, expiry: $('tExpiry').value, shop: $('tShop').value,
+    buyDate: $('tBuyDate').value, expiry: $('tExpiry').value, shop,
     usageHistory: [], createdAt: serverTimestamp()
   });
   showToast('チケットパックを登録しました');
@@ -745,22 +967,22 @@ $('saveTicketBtn').addEventListener('click', async () => {
 });
 
 async function loadTicketList(carId) {
-  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`), orderBy('createdAt','desc')));
-  const list = $('ticketList'); list.innerHTML = '';
-  if (snap.empty) { list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">チケットパックがまだありません</p>'; return; }
+  const snap = await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`), orderBy('createdAt','desc')));
+  const list = $('ticketList'); list.innerHTML='';
+  if (snap.empty) { list.innerHTML='<p class="text-center text-slate-400 text-sm py-6">チケットパックがまだありません</p>'; return; }
   snap.forEach(d => {
     const t = d.data();
-    const pct = t.total > 0 ? Math.round((t.remaining/t.total)*100) : 0;
-    const isFinished = t.remaining <= 0;
-    let barColor = isFinished ? 'bg-slate-300' : (t.remaining <= 1 ? 'bg-yellow-500' : 'bg-purple-500');
+    const pct = t.total>0 ? Math.round((t.remaining/t.total)*100) : 0;
+    const isFinished = t.remaining<=0;
+    const barColor = isFinished ? 'bg-slate-300' : (t.remaining<=1 ? 'bg-yellow-500' : 'bg-purple-500');
     const expBadge = t.expiry ? expiryBadge(daysUntil(t.expiry)) : null;
     const historyHtml = (t.usageHistory||[]).slice().reverse().slice(0,5)
-      .map(h => `<li class="text-xs text-slate-400">・${h.date}${h.memo?'　'+h.memo:''}</li>`).join('');
+      .map(h=>`<li class="text-xs text-slate-400">・${h.date}${h.memo?'　'+h.memo:''}</li>`).join('');
     const div = document.createElement('div');
     div.className = `bg-white border border-slate-100 rounded-2xl shadow-sm p-4 ${isFinished?'opacity-60':''}`;
     div.innerHTML = `
       <div class="flex justify-between items-start mb-2">
-        <div><p class="font-bold text-slate-800">${t.name}</p>
+        <div><p class="font-bold">${t.name}</p>
         <p class="text-xs text-slate-400">${t.shop?t.shop+'／':''}${t.buyDate?'購入:'+t.buyDate:''}</p></div>
         <span class="text-2xl">${isFinished?'🏁':'🎫'}</span>
       </div>
@@ -771,35 +993,35 @@ async function loadTicketList(carId) {
       ${expBadge?`<span class="inline-block text-xs px-2 py-0.5 rounded-full ${expBadge.cls} mb-2">有効期限 ${t.expiry}（${expBadge.label}）</span>`:''}
       ${historyHtml?`<ul class="mb-2">${historyHtml}</ul>`:''}
       <div class="flex gap-2">
-        ${!isFinished?`<button class="useTicketBtn flex-1 bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-xl font-bold text-sm" data-id="${d.id}" data-name="${t.name}" data-rem="${t.remaining}" data-car="${carId}">🎟️ 1枚使用する</button>`:'<span class="flex-1 text-center text-slate-400 text-sm py-2">使い切りました</span>'}
+        ${!isFinished?`<button class="useTicketBtn flex-1 bg-purple-600 text-white py-2 rounded-xl font-bold text-sm" data-id="${d.id}" data-name="${t.name}" data-rem="${t.remaining}" data-car="${carId}">🎟️ 1枚使用する</button>`:'<span class="flex-1 text-center text-slate-400 text-sm py-2">使い切りました</span>'}
         <button class="delTicketBtn text-red-500 text-xs px-3 border border-red-200 rounded-xl" data-id="${d.id}" data-car="${carId}">削除</button>
       </div>`;
     list.appendChild(div);
   });
   list.querySelectorAll('.useTicketBtn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const rem = parseInt(btn.dataset.rem, 10); if (rem <= 0) return;
+      const rem = parseInt(btn.dataset.rem,10); if (rem<=0) return;
       if (!confirm(`「${btn.dataset.name}」を1枚使用しますか？\nメンテナンス履歴にも自動で記録されます。`)) return;
-      const memo = prompt('メモ（任意・空欄でOK）', '') || '';
+      const memo = prompt('メモ（任意・空欄でOK）','')||'';
       const today = new Date().toISOString().slice(0,10);
       const carId = btn.dataset.car;
-      const packRef = doc(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`, btn.dataset.id);
-      const newRemaining = rem - 1;
-      await updateDoc(packRef, { remaining: newRemaining, usageHistory: arrayUnion({ date: today, memo }) });
-      await addDoc(collection(db, `users/${currentUser.uid}/cars/${carId}/maintenanceLogs`), {
-        status: '完了', category: '洗車・コーティング', completedDate: today, completedOdo: null,
-        actualCost: 0, workDetail: `${btn.dataset.name}（チケット使用・残り${newRemaining}枚）`, memo,
-        createdAt: serverTimestamp()
+      const newRemaining = rem-1;
+      await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,btn.dataset.id),
+        { remaining:newRemaining, usageHistory:arrayUnion({date:today,memo}) });
+      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),{
+        status:'完了', category:'洗車・コーティング', completedDate:today, completedOdo:null,
+        actualCost:0, workDetail:`${btn.dataset.name}（チケット使用・残り${newRemaining}枚）`, doneNote:memo,
+        createdAt:serverTimestamp()
       });
       showToast(`チケットを1枚使用しました（残り${newRemaining}枚）`);
       loadTicketList(carId);
-      if (currentCarId === carId) loadMaint();
+      if (currentCarId===carId) loadMaint();
     });
   });
   list.querySelectorAll('.delTicketBtn').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('このチケットパックを削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${btn.dataset.car}/ticketPacks`, btn.dataset.id));
+      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${btn.dataset.car}/ticketPacks`,btn.dataset.id));
       loadTicketList(btn.dataset.car);
     });
   });
@@ -807,8 +1029,8 @@ async function loadTicketList(carId) {
 
 // ---------- 車両管理 ----------
 $('addCarBtn').addEventListener('click', () => {
-  $('carDocId').value = ''; $('carModalTitle').textContent = '車両情報を登録';
-  document.querySelectorAll('#carModal input:not([type=hidden]), #carModal select').forEach(i => i.value = '');
+  $('carDocId').value=''; $('carModalTitle').textContent='車両情報を登録';
+  document.querySelectorAll('#carModal input:not([type=hidden]), #carModal select').forEach(i=>i.value='');
   $('carModal').classList.add('active');
 });
 $('saveCarBtn').addEventListener('click', async () => {
@@ -817,36 +1039,36 @@ $('saveCarBtn').addEventListener('click', async () => {
     year:$('cYear').value, plate:$('cPlate').value, vin:$('cVin').value,
     fuelType:$('cFuelType').value, driveType:$('cDriveType').value,
     odo:Number($('cOdo').value)||0, shaken:$('cShaken').value,
-    specs:{ tireSize:$('cSpecTire').value, tirePressure:$('cSpecAir').value,
-      oilViscosity:$('cSpecOil').value, batteryModel:$('cSpecBattery').value, wiperSize:$('cSpecWiper').value },
-    updatedAt: serverTimestamp() };
+    specs:{tireSize:$('cSpecTire').value, tirePressure:$('cSpecAir').value,
+      oilViscosity:$('cSpecOil').value, batteryModel:$('cSpecBattery').value, wiperSize:$('cSpecWiper').value},
+    updatedAt:serverTimestamp() };
   const docId = $('carDocId').value;
-  if (docId) { await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), data); }
+  if (docId) { await updateDoc(doc(db,`users/${currentUser.uid}/cars`,docId),data); }
   else {
-    const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
-    if (snap.size >= 5) return alert('登録できる車両は5台までです');
-    data.createdAt = serverTimestamp();
-    await addDoc(collection(db, `users/${currentUser.uid}/cars`), data);
+    const snap = await getDocs(collection(db,`users/${currentUser.uid}/cars`));
+    if (snap.size>=5) return alert('登録できる車両は5台までです');
+    data.createdAt=serverTimestamp();
+    await addDoc(collection(db,`users/${currentUser.uid}/cars`),data);
   }
   showToast('車両情報を保存しました'); $('carModal').classList.remove('active'); loadCars();
 });
 
 async function loadCars() {
-  const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
-  const list = $('carList'); list.innerHTML = '';
-  $('globalCarSelect').innerHTML = '';
-  $('addCarBtn').disabled = snap.size >= 5;
-  $('addCarBtn').classList.toggle('opacity-40', snap.size >= 5);
+  const snap = await getDocs(collection(db,`users/${currentUser.uid}/cars`));
+  const list=$('carList'); list.innerHTML='';
+  $('globalCarSelect').innerHTML='';
+  $('addCarBtn').disabled=snap.size>=5;
+  $('addCarBtn').classList.toggle('opacity-40',snap.size>=5);
   snap.forEach(d => {
-    const c = d.data();
-    const opt = document.createElement('option'); opt.value = d.id; opt.textContent = c.nickname;
+    const c=d.data();
+    const opt=document.createElement('option'); opt.value=d.id; opt.textContent=c.nickname;
     $('globalCarSelect').appendChild(opt);
-    const shakenBadge = expiryBadge(daysUntil(c.shaken));
-    const insBadge = expiryBadge(daysUntil(c.insurance?.expiry));
-    const jibaiBadge = expiryBadge(daysUntil(c.jibaiInsurance?.expiry));
-    const div = document.createElement('div');
-    div.className = 'bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
-    div.innerHTML = `
+    const shakenBadge=expiryBadge(daysUntil(c.shaken));
+    const insBadge=expiryBadge(daysUntil(c.insurance?.expiry));
+    const jibaiBadge=expiryBadge(daysUntil(c.jibaiInsurance?.expiry));
+    const div=document.createElement('div');
+    div.className='bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
+    div.innerHTML=`
       <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3">
         <h3 class="font-bold text-lg">${c.nickname}</h3>
         <p class="text-blue-200 text-xs">${c.maker||''} ${c.model||''} ${c.year?'('+c.year+')':''}</p>
@@ -865,109 +1087,105 @@ async function loadCars() {
           <span class="text-blue-600 text-xs font-bold">詳細を見る →</span>
         </div>
       </div>`;
-    div.addEventListener('click', () => openDetailModal(d.id, c));
+    div.addEventListener('click',()=>openDetailModal(d.id,c));
     list.appendChild(div);
   });
-  if ($('globalCarSelect').value) { currentCarId = $('globalCarSelect').value; loadFuel(); loadMaint(); }
+  if ($('globalCarSelect').value) { currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); }
 }
-$('globalCarSelect').addEventListener('change', () => {
-  currentCarId = $('globalCarSelect').value; loadFuel(); loadMaint();
-});
+$('globalCarSelect').addEventListener('change',()=>{ currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); });
 
 // ---------- レシートOCR ----------
 async function scanReceipt(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = async () => {
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=async()=>{
         try {
-          const canvas = document.createElement('canvas');
-          const scale = Math.min(1200 / img.width, 1);
-          canvas.width = img.width * scale; canvas.height = img.height * scale;
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          const { data: { text } } = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 0.85), 'jpn+eng');
+          const canvas=document.createElement('canvas');
+          const scale=Math.min(1200/img.width,1);
+          canvas.width=img.width*scale; canvas.height=img.height*scale;
+          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+          const {data:{text}}=await Tesseract.recognize(canvas.toDataURL('image/jpeg',0.85),'jpn+eng');
           resolve(text);
-        } catch(err) { reject(err); }
+        } catch(err){reject(err);}
       };
-      img.onerror = reject; img.src = e.target.result;
+      img.onerror=reject; img.src=e.target.result;
     };
-    reader.onerror = reject; reader.readAsDataURL(file);
+    reader.onerror=reject; reader.readAsDataURL(file);
   });
 }
 function parseReceiptText(text) {
-  const result = {};
-  const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
-  if (dateMatch) result.date = `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
-  const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
-  if (litersMatch) result.liters = parseFloat(litersMatch[1]);
-  let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
-  if (!amountMatch) amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
-  if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g,''), 10);
+  const result={};
+  const dateMatch=text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
+  if (dateMatch) result.date=`${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
+  const litersMatch=text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
+  if (litersMatch) result.liters=parseFloat(litersMatch[1]);
+  let amountMatch=text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
+  if (!amountMatch) amountMatch=text.match(/[¥￥]\s*([\d,]{3,7})/);
+  if (amountMatch) result.amount=parseInt(amountMatch[1].replace(/,/g,''),10);
   return result;
 }
-$('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
-$('fReceiptScan').addEventListener('change', async e => {
-  const file = e.target.files[0]; if (!file) return;
-  const statusEl = $('scanStatus');
-  statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
-  statusEl.classList.remove('hidden'); $('scanReceiptBtn').disabled = true;
+$('scanReceiptBtn').addEventListener('click',()=>$('fReceiptScan').click());
+$('fReceiptScan').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const statusEl=$('scanStatus');
+  statusEl.textContent='🔍 読み取り中…（10〜20秒ほどかかります）';
+  statusEl.classList.remove('hidden'); $('scanReceiptBtn').disabled=true;
   try {
-    const parsed = parseReceiptText(await scanReceipt(file));
-    if (parsed.date) $('fDate').value = parsed.date;
-    if (parsed.liters) $('fLiters').value = parsed.liters;
-    if (parsed.amount) $('fPrice').value = parsed.amount;
-    statusEl.textContent = (parsed.date||parsed.liters||parsed.amount)
-      ? '✅ 読み取り完了。内容を確認・修正してから記録追加してください' : '⚠️ うまく読み取れませんでした。手動で入力してください';
-  } catch(err) { statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください'; }
-  finally { $('scanReceiptBtn').disabled = false; e.target.value = ''; }
+    const parsed=parseReceiptText(await scanReceipt(file));
+    if(parsed.date) $('fDate').value=parsed.date;
+    if(parsed.liters) $('fLiters').value=parsed.liters;
+    if(parsed.amount) $('fPrice').value=parsed.amount;
+    statusEl.textContent=(parsed.date||parsed.liters||parsed.amount)
+      ?'✅ 読み取り完了。内容を確認・修正してから記録追加してください':'⚠️ うまく読み取れませんでした。手動で入力してください';
+  } catch(err){statusEl.textContent='❌ 読み取りに失敗しました。手動で入力してください';}
+  finally{$('scanReceiptBtn').disabled=false; e.target.value='';}
 });
 
 // ---------- 給油記録 ----------
-$('saveFuelBtn').addEventListener('click', async () => {
-  if (!currentCarId) return alert('先に車両を選択してください');
-  const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value);
-  const isFull = $('fFull').checked;
-  if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
-  const prevSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer','desc')));
-  let efficiency = null;
-  if (!prevSnap.empty) {
-    const prev = prevSnap.docs[0].data();
-    if (isFull && prev.fullTank && odo > prev.odometer) {
-      efficiency = Math.round(((odo - prev.odometer) / liters) * 10) / 10;
+$('saveFuelBtn').addEventListener('click',async()=>{
+  if(!currentCarId) return alert('先に車両を選択してください');
+  const date=$('fDate').value, odo=Number($('fOdo').value), liters=Number($('fLiters').value), price=Number($('fPrice').value);
+  const isFull=$('fFull').checked;
+  if(!date||!odo||!liters) return alert('日付・走行距離・給油量は必須です');
+  const prevSnap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('odometer','desc')));
+  let efficiency=null;
+  if(!prevSnap.empty){
+    const prev=prevSnap.docs[0].data();
+    if(isFull&&prev.fullTank&&odo>prev.odometer){
+      efficiency=Math.round(((odo-prev.odometer)/liters)*10)/10;
     }
   }
-  await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
-    date, odometer: odo, liters, amount: price, fullTank: isFull, efficiency, createdAt: serverTimestamp()
+  await addDoc(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),{
+    date, odometer:odo, liters, amount:price, fullTank:isFull, efficiency, createdAt:serverTimestamp()
   });
-  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
+  await updateDoc(doc(db,`users/${currentUser.uid}/cars`,currentCarId),{odo});
   $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
   $('scanStatus').classList.add('hidden');
   showToast('給油記録を追加しました'); loadFuel(); loadCars();
 });
 
 async function loadFuel() {
-  if (!currentCarId) return;
-  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('date','desc')));
-  const list = $('fuelList'); list.innerHTML = '';
-  if (snap.empty) { $('fuelSummary').classList.add('hidden'); list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>'; return; }
-
-  const effs = [];
-  snap.forEach(d => { const f = d.data(); if (f.efficiency) effs.push(f.efficiency); });
-  if (effs.length) {
+  if(!currentCarId) return;
+  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('date','desc')));
+  const list=$('fuelList'); list.innerHTML='';
+  if(snap.empty){$('fuelSummary').classList.add('hidden'); list.innerHTML='<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>'; return;}
+  const effs=[];
+  snap.forEach(d=>{const f=d.data(); if(f.efficiency) effs.push(f.efficiency);});
+  if(effs.length){
     $('fuelSummary').classList.remove('hidden');
-    $('fuel-avg').textContent = (effs.reduce((a,b)=>a+b,0)/effs.length).toFixed(1);
-    $('fuel-latest').textContent = effs[0];
-    $('fuel-best').textContent = Math.max(...effs);
-    $('fuel-worst').textContent = Math.min(...effs);
-  } else { $('fuelSummary').classList.add('hidden'); }
-
-  snap.forEach(d => {
-    const f = d.data();
-    const effBadge = f.efficiency ? `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>` : `<span class="text-xs text-slate-400">${f.fullTank?'算出不可':'部分給油'}</span>`;
-    const div = document.createElement('div');
-    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm';
-    div.innerHTML = `
+    $('fuel-avg').textContent=(effs.reduce((a,b)=>a+b,0)/effs.length).toFixed(1);
+    $('fuel-latest').textContent=effs[0];
+    $('fuel-best').textContent=Math.max(...effs);
+    $('fuel-worst').textContent=Math.min(...effs);
+  } else {$('fuelSummary').classList.add('hidden');}
+  snap.forEach(d=>{
+    const f=d.data();
+    const effBadge=f.efficiency?`<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>`:`<span class="text-xs text-slate-400">${f.fullTank?'算出不可':'部分給油'}</span>`;
+    const div=document.createElement('div');
+    div.className='bg-white p-3 rounded-xl shadow-sm text-sm';
+    div.innerHTML=`
       <div class="flex justify-between items-start">
         <div><p class="font-bold">${f.date}${f.fullTank?' <span class="text-xs text-slate-400">満タン</span>':''}</p>
         <p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${f.amount.toLocaleString()}</p></div>
@@ -975,139 +1193,78 @@ async function loadFuel() {
       </div>`;
     list.appendChild(div);
   });
-  list.querySelectorAll('.delFuelBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
+  list.querySelectorAll('.delFuelBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      if(!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`,btn.dataset.id));
       loadFuel();
     });
   });
 }
 
-// ---------- カテゴリ管理 ----------
-async function loadCategories() {
-  const colRef = collection(db, `users/${currentUser.uid}/categories`);
-  let snap = await getDocs(query(colRef, orderBy('createdAt')));
-  if (snap.empty) {
-    const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換",
-      "エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
-    for (const name of defaults) await addDoc(colRef, { name, createdAt: serverTimestamp() });
-    snap = await getDocs(query(colRef, orderBy('createdAt')));
-  }
-  const listEl = $('categoryList'); const selectEl = $('mCategory');
-  listEl.innerHTML = ''; selectEl.innerHTML = '';
-  snap.forEach(d => {
-    const data = d.data();
-    const li = document.createElement('li');
-    li.className = 'flex items-center gap-2 py-1.5';
-    li.innerHTML = `<input type="text" value="${data.name}" data-id="${d.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
-      <button class="catDelBtn text-red-500 text-xs font-bold px-2" data-id="${d.id}">削除</button>`;
-    listEl.appendChild(li);
-    const opt = document.createElement('option'); opt.value = data.name; opt.textContent = data.name;
-    selectEl.appendChild(opt);
-  });
-  listEl.querySelectorAll('.catEditInput').forEach(inp => {
-    inp.addEventListener('change', async () => {
-      if (!inp.value.trim()) return;
-      await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: inp.value.trim() });
-      loadCategories();
-    });
-  });
-  listEl.querySelectorAll('.catDelBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/categories`, btn.dataset.id));
-      loadCategories();
-    });
-  });
-}
-$('addCategoryBtn').addEventListener('click', async () => {
-  const name = $('newCategoryName').value.trim(); if (!name) return;
-  await addDoc(collection(db, `users/${currentUser.uid}/categories`), { name, createdAt: serverTimestamp() });
-  $('newCategoryName').value = ''; loadCategories();
-});
-
-// ---------- 店舗マスタ ----------
-async function loadShops() {
-  const colRef = collection(db, `users/${currentUser.uid}/shops`);
-  const snap = await getDocs(query(colRef, orderBy('createdAt')));
-  const listEl = $('shopList'); const selectEl = $('mShop');
-  listEl.innerHTML = ''; selectEl.innerHTML = '<option value="">店舗を選択</option>';
-  snap.forEach(d => {
-    const data = d.data();
-    const li = document.createElement('li');
-    li.className = 'flex justify-between items-center py-1.5 text-sm';
-    li.innerHTML = `<span>${data.name}（${data.tel||'-'}）</span>
-      <button class="shopDelBtn text-red-500 text-xs font-bold" data-id="${d.id}">削除</button>`;
-    listEl.appendChild(li);
-    const opt = document.createElement('option'); opt.value = d.id; opt.textContent = data.name;
-    selectEl.appendChild(opt);
-  });
-  listEl.querySelectorAll('.shopDelBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/shops`, btn.dataset.id));
-      loadShops();
-    });
-  });
-}
-$('addShopBtn').addEventListener('click', async () => {
-  const name = $('newShopName').value.trim(); if (!name) return;
-  await addDoc(collection(db, `users/${currentUser.uid}/shops`), { name, tel:$('newShopTel').value.trim(), createdAt:serverTimestamp() });
-  $('newShopName').value=''; $('newShopTel').value=''; loadShops();
-});
-
-// ---------- メンテナンス ----------
-$('addMaintBtn').addEventListener('click', () => {
-  if (!currentCarId) return alert('先に車両を選択してください');
-  $('maintDocId').value = '';
-  document.querySelectorAll('#maintModal input:not([type=hidden]), #maintModal select').forEach(i => i.value = '');
+// ---------- メンテナンス（作業チェックリストはカテゴリマスタと連動・完了時備考を分離） ----------
+$('addMaintBtn').addEventListener('click',()=>{
+  if(!currentCarId) return alert('先に車両を選択してください');
+  $('maintDocId').value='';
+  document.querySelectorAll('#maintModal input:not([type=hidden], [type=checkbox]), #maintModal select, #maintModal textarea').forEach(i=>i.value='');
+  renderWorkChecklist([]);
   $('maintModal').classList.add('active');
 });
-$('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
+$('closeMaintModal').addEventListener('click',()=>$('maintModal').classList.remove('active'));
+
 async function saveMaint(status) {
-  if (!currentCarId) return alert('先に車両を選択してください');
-  const data = { status, category:$('mCategory').value, shopId:$('mShop').value, staffName:$('mStaff').value,
+  if(!currentCarId) return alert('先に車両を選択してください');
+  const checkedWorks = [...document.querySelectorAll('.workCheckItem:checked')].map(cb=>cb.value);
+  const data={
+    status, category:$('mCategory').value, shopId:$('mShop').value, staffName:$('mStaff').value,
     reservationDate:$('mResDate').value, reservationTime:$('mResTime').value, memo:$('mMemo').value,
     completedDate:$('mDoneDate').value, completedOdo:Number($('mDoneOdo').value)||null,
-    actualCost:Number($('mCost').value)||null, workDetail:$('mWork').value, nextScheduleDate:$('mNext').value,
-    updatedAt: serverTimestamp() };
-  const docId = $('maintDocId').value;
-  const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
-  if (docId) { await updateDoc(doc(colRef, docId), data); }
-  else { data.createdAt = serverTimestamp(); await addDoc(colRef, data); }
+    actualCost:Number($('mCost').value)||null, workDetail:$('mWork').value,
+    checkedWorks, doneNote:$('mDoneNote').value,
+    nextScheduleDate:$('mNext').value,
+    updatedAt:serverTimestamp()
+  };
+  const docId=$('maintDocId').value;
+  const colRef=collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
+  if(docId){await updateDoc(doc(colRef,docId),data);}
+  else{data.createdAt=serverTimestamp(); await addDoc(colRef,data);}
   showToast(status==='完了'?'完了記録を保存しました':'予約を保存しました');
   $('maintModal').classList.remove('active'); loadMaint();
 }
-$('saveMaintReserveBtn').addEventListener('click', () => saveMaint('予約済み'));
-$('saveMaintDoneBtn').addEventListener('click', () => saveMaint('完了'));
+$('saveMaintReserveBtn').addEventListener('click',()=>saveMaint('予約済み'));
+$('saveMaintDoneBtn').addEventListener('click',()=>saveMaint('完了'));
 
 async function loadMaint() {
-  if (!currentCarId) return;
-  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`), orderBy('createdAt','desc')));
-  const activeList = $('maintListActive'), doneList = $('maintListDone');
-  activeList.innerHTML = ''; doneList.innerHTML = '';
-  let ac=0, dc=0;
-  snap.forEach(d => {
-    const m = d.data();
-    const div = document.createElement('div');
-    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    if (m.status==='完了') {
+  if(!currentCarId) return;
+  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`),orderBy('createdAt','desc')));
+  const activeList=$('maintListActive'), doneList=$('maintListDone');
+  activeList.innerHTML=''; doneList.innerHTML='';
+  let ac=0,dc=0;
+  snap.forEach(d=>{
+    const m=d.data();
+    const div=document.createElement('div');
+    div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+    if(m.status==='完了'){
       dc++;
-      div.innerHTML = `<p class="font-bold text-green-700">✅ ${m.category}</p>
-        <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0} ／ ${m.workDetail||''}</p>
-        ${m.nextScheduleDate?`<p class="text-xs text-blue-600">次回予定: ${m.nextScheduleDate}</p>`:''}
-        <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>`;
+      const worksHtml=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
+      div.innerHTML=`
+        <p class="font-bold text-green-700">✅ ${m.category}</p>
+        <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0}${m.workDetail?' ／ '+m.workDetail:''}</p>
+        ${worksHtml?`<div class="flex flex-wrap gap-1 mt-1">${worksHtml}</div>`:''}
+        ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 ${m.doneNote}</p>`:''}
+        ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}
+        <div class="flex justify-end"><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
       doneList.appendChild(div);
     } else {
       ac++;
-      const days = daysUntil(m.reservationDate);
-      div.innerHTML = `
+      const days=daysUntil(m.reservationDate);
+      div.innerHTML=`
         <div class="flex justify-between items-start">
           <div><p class="font-bold">${m.category}</p>
           <p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div>
           <span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span>
         </div>
+        ${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}
         <div class="flex gap-2 pt-1">
           <button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button>
           <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
@@ -1115,23 +1272,26 @@ async function loadMaint() {
       activeList.appendChild(div);
     }
   });
-  if (ac===0) activeList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
-  if (dc===0) doneList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
-  document.querySelectorAll('.editMaintBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
-      const m = snap2.data();
-      $('maintDocId').value=btn.dataset.id; $('mCategory').value=m.category||''; $('mShop').value=m.shopId||'';
-      $('mStaff').value=m.staffName||''; $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||'';
-      $('mMemo').value=m.memo||''; $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
-      $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||''; $('mNext').value=m.nextScheduleDate||'';
+  if(ac===0) activeList.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
+  if(dc===0) doneList.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
+  document.querySelectorAll('.editMaintBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const snap2=await getDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id));
+      const m=snap2.data();
+      $('maintDocId').value=btn.dataset.id;
+      $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
+      $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
+      $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
+      $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||'';
+      $('mNext').value=m.nextScheduleDate||''; $('mDoneNote').value=m.doneNote||'';
+      renderWorkChecklist(m.checkedWorks||[]);
       $('maintModal').classList.add('active');
     });
   });
-  document.querySelectorAll('.delMaintBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
+  document.querySelectorAll('.delMaintBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      if(!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id));
       loadMaint();
     });
   });
