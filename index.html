@@ -125,8 +125,8 @@
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-1 text-slate-700">📋 バージョン情報</h3>
       <p id="versionInfoText" class="text-xs text-slate-500 mb-2"></p>
-      <a href="./CHANGELOG.md" target="_blank" class="block text-center text-blue-600 border border-blue-300 py-2 rounded-lg text-sm font-bold">CHANGELOG.md を確認する →</a>
-      <a href="https://github.com/hirokanekurihara/my-car-manager/commits/main" target="_blank" class="block text-center text-slate-500 text-xs mt-2 underline">GitHubの詳細なコミット履歴を見る →</a>
+      <a id="changelogLink" target="_blank" class="block text-center text-blue-600 border border-blue-300 py-2 rounded-lg text-sm font-bold">CHANGELOG.md を確認する →</a>
+　　　　<a id="commitsLink" target="_blank" class="block text-center text-slate-500 text-xs mt-2 underline">GitHubの詳細なコミット履歴を見る →</a>
     </div>
   </section>
 </main>
@@ -448,6 +448,20 @@ let currentDetailCarData = null;
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
+// 現在アクセスしているURLから、正しいGitHubリンクを自動計算する。
+// ブランチ名は "HEAD" を指定することで main/master どちらでも自動対応させ、
+// 「username.github.io」という特殊な名前のリポジトリ（ユーザーページ）で
+// 直下にサイトが公開されているケースにも対応できるようにしている。
+const hostname = window.location.hostname;
+if (hostname.endsWith('.github.io')) {
+  const username = hostname.split('.')[0];
+  // "index.html" のようなファイル名が混ざらないよう、"." を含む部分は除外する
+  const pathParts = window.location.pathname.split('/').filter(p => p && !p.includes('.'));
+  const repo = pathParts.length > 0 ? pathParts[0] : `${username}.github.io`;
+  const repoUrl = `https://github.com/${username}/${repo}`;
+  $('changelogLink').href = `${repoUrl}/blob/HEAD/CHANGELOG.md`;
+  $('commitsLink').href = `${repoUrl}/commits/HEAD`;
+}
 $('versionInfoText') && ($('versionInfoText').textContent = `現在のバージョン: v${APP_VERSION}`);
 
 function daysUntil(dateStr) {
