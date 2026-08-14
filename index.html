@@ -175,9 +175,17 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
-    getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult,
-    onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  getAuth,
+  GoogleAuthProvider,
+  signInWithRedirect,
+  signInWithPopup,
+  getRedirectResult,
+  onAuthStateChanged,
+  signOut,
+  setPersistence,
+  browserLocalPersistence
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
   import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp }
     from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -200,17 +208,38 @@
 
   const $ = (id) => document.getElementById(id);
 
-  // ---------- ログイン処理 ----------
-  // setPersistenceは「保険的な対策」であり、これが今回の不具合を確実に解決する
-  // 保証はありません。まずは環境要因（アプリ内ブラウザ等）の確認と併用してください。
-  async function doLogin() {
-    try {
-      await setPersistence(auth, browserLocalPersistence);
-      await signInWithRedirect(auth, new GoogleAuthProvider());
-    } catch (err) {
+
+// ホーム画面から起動された（standaloneモードの）PWAかどうかを判定する。
+// navigator.standalone は iOS Safari 固有のプロパティで、matchMedia は
+// より標準的な判定方法。両方をチェックすることで判定の確実性を高めている。
+function isStandalonePWA() {
+  return window.navigator.standalone === true
+      || window.matchMedia('(display-mode: standalone)').matches;
+}
+
+async function doLogin() {
+  try {
+    await setPersistence(auth, browserLocalPersistence);
+    const provider = new GoogleAuthProvider();
+
+    if (isStandalonePWA()) {
+      // ホーム画面のアイコンから開いた場合は、
+      // redirect方式だとiOSのITP制限でログイン結果が受け取れずループするため、
+      // ポップアップ（別窓）方式でログインする
+      await signInWithPopup(auth, provider);
+      // 成功すると onAuthStateChanged が自動的に反応して画面が切り替わる
+    } else {
+      // 通常のSafariタブやPCブラウザではこれまで通りredirect方式を使う
+      await signInWithRedirect(auth, provider);
+    }
+  } catch (err) {
+    // ユーザーが自分でポップアップを閉じた／キャンセルした場合はエラー表示しない
+    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
       alert("ログイン開始エラー\nコード: " + err.code + "\n内容: " + err.message);
     }
   }
+}
+
   $('loginBtn').addEventListener('click', doLogin);
   $('loginBtnMain').addEventListener('click', () => {
     $('loginStatus').classList.remove('hidden');
