@@ -14,37 +14,38 @@
   .tab-content.active { display: block; }
   .tab-btn.active { background-color: #2563eb; color: #fff; }
   .maintSub.active { background-color: #2563eb; color: #fff; }
+  .detail-tab-btn.active { background-color: #1e40af; color: #fff; }
   .modal { display: none; }
   .modal.active { display: flex; }
-  .fade-in { animation: fadeIn .15s ease-out; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .fade-in { animation: fadeIn .2s ease-out; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
 
 <header class="bg-blue-700 text-white shadow sticky top-0 z-30 px-4 py-3 flex justify-between items-center">
-  <h1 class="text-lg sm:text-xl font-bold">🚗 マイカー管理</h1>
-  <div>
-    <button id="loginBtn" class="bg-white text-blue-700 px-3 py-1.5 rounded-lg font-bold text-sm hidden">🔑 Googleでログイン</button>
+  <h1 class="text-lg font-bold">🚗 マイカー管理</h1>
+  <div class="flex gap-2">
+    <button id="loginBtn" class="bg-white text-blue-700 px-3 py-1.5 rounded-lg font-bold text-sm hidden">🔑 ログイン</button>
     <button id="logoutBtn" class="bg-blue-900 text-white px-3 py-1.5 rounded-lg font-bold text-sm hidden">ログアウト</button>
   </div>
 </header>
 
-<div id="unauthScreen" class="p-8 text-center mt-10 max-w-md mx-auto bg-white rounded-xl shadow-sm">
-  <p class="text-4xl mb-3">🔒</p>
-  <p class="font-bold mb-2">ログインしてください</p>
-  <p class="text-sm text-slate-500 mb-4">車両情報はGoogleアカウントに紐づけてクラウド（Cloud Firestore）に保存されます。同じアカウントで別デバイスからログインすれば同じデータを確認・編集できます。</p>
-  <button id="loginBtnMain" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-sm w-full">🔑 Googleでログイン</button>
+<div id="unauthScreen" class="p-8 text-center mt-10 max-w-md mx-auto bg-white rounded-2xl shadow">
+  <p class="text-5xl mb-4">🔒</p>
+  <p class="font-bold text-lg mb-2">ログインしてください</p>
+  <p class="text-sm text-slate-500 mb-6">Googleアカウントでログインすると、複数のデバイスから同じデータにアクセスできます。</p>
+  <button id="loginBtnMain" class="bg-blue-600 text-white px-6 py-3 rounded-xl font-bold text-base w-full shadow">🔑 Googleでログイン</button>
   <p id="loginStatus" class="text-xs text-slate-400 mt-3 hidden">ログイン処理中…</p>
 </div>
 
 <main id="authScreen" class="max-w-5xl mx-auto px-3 sm:px-4 py-4 hidden space-y-4">
 
   <nav class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs sm:text-sm font-semibold">
-    <button class="tab-btn active flex-1 py-2 rounded-lg" data-target="tab-cars">🚘 車両</button>
-    <button class="tab-btn flex-1 py-2 rounded-lg" data-target="tab-fuel">⛽ 給油</button>
-    <button class="tab-btn flex-1 py-2 rounded-lg" data-target="tab-maint">🔧 メンテ</button>
-    <button class="tab-btn flex-1 py-2 rounded-lg" data-target="tab-settings">⚙️ 設定</button>
+    <button class="tab-btn active flex-1 py-2 rounded-lg transition" data-target="tab-cars">🚘 車両</button>
+    <button class="tab-btn flex-1 py-2 rounded-lg transition" data-target="tab-fuel">⛽ 給油</button>
+    <button class="tab-btn flex-1 py-2 rounded-lg transition" data-target="tab-maint">🔧 メンテ</button>
+    <button class="tab-btn flex-1 py-2 rounded-lg transition" data-target="tab-settings">⚙️ 設定</button>
   </nav>
 
   <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-2">
@@ -52,52 +53,46 @@
     <select id="globalCarSelect" class="flex-1 border border-slate-300 p-2 rounded-lg text-sm"></select>
   </div>
 
-  <!-- 車両タブ -->
   <section id="tab-cars" class="tab-content active space-y-3">
-    <button id="addCarBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm">＋ 車両を追加（最大5台）</button>
+    <button id="addCarBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow">＋ 車両を追加（最大5台）</button>
     <div id="carList" class="grid sm:grid-cols-2 gap-3"></div>
   </section>
 
-  <!-- 給油タブ -->
   <section id="tab-fuel" class="tab-content space-y-3">
     <div class="bg-white p-4 rounded-xl shadow-sm">
-      <h3 class="font-bold mb-3 text-slate-700">＋ 給油記録を追加</h3>
+      <h3 class="font-bold mb-3 text-slate-700">⛽ 給油記録を追加</h3>
       <div class="grid grid-cols-2 gap-2 text-sm">
         <input type="date" id="fDate" class="border border-slate-300 p-2 rounded-lg col-span-2">
         <input type="number" id="fOdo" placeholder="走行距離(km)" class="border border-slate-300 p-2 rounded-lg">
         <input type="number" id="fLiters" placeholder="給油量(L)" step="0.01" class="border border-slate-300 p-2 rounded-lg">
         <input type="number" id="fPrice" placeholder="金額(円)" class="border border-slate-300 p-2 rounded-lg">
-        <label class="flex items-center gap-1 border border-slate-300 p-2 rounded-lg bg-slate-50 text-xs">
-          <input type="checkbox" id="fFull" checked> 満タン
+        <label class="flex items-center gap-2 border border-slate-300 p-2 rounded-lg bg-slate-50 text-xs cursor-pointer">
+          <input type="checkbox" id="fFull" checked class="w-4 h-4"> 満タン給油
         </label>
-        <div class="col-span-2 border border-slate-300 p-2 rounded-lg bg-slate-50 space-y-1">
-          <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 text-white py-2 rounded-lg font-bold text-xs">
-            🧾 レシートをスキャンして自動入力
-          </button>
+        <div class="col-span-2 border border-slate-300 p-3 rounded-lg bg-slate-50 space-y-2">
+          <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-bold text-xs transition">🧾 レシートをスキャンして自動入力</button>
           <input type="file" id="fReceiptScan" accept="image/*" capture="environment" class="hidden">
           <p id="scanStatus" class="text-center text-xs text-slate-500 hidden"></p>
         </div>
-        <button id="saveFuelBtn" class="col-span-2 bg-blue-600 text-white py-2 rounded-lg font-bold">＋ 記録追加</button>
+        <button id="saveFuelBtn" class="col-span-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition shadow">＋ 記録追加</button>
       </div>
     </div>
     <div id="fuelList" class="space-y-2"></div>
   </section>
 
-  <!-- メンテタブ -->
   <section id="tab-maint" class="tab-content space-y-3">
     <div class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs font-semibold">
-      <button class="maintSub active flex-1 py-1.5 rounded-lg" data-status="active">予約中・進行中</button>
-      <button class="maintSub flex-1 py-1.5 rounded-lg" data-status="done">完了済み</button>
+      <button class="maintSub active flex-1 py-1.5 rounded-lg transition" data-status="active">📅 予約中・進行中</button>
+      <button class="maintSub flex-1 py-1.5 rounded-lg transition" data-status="done">✅ 完了済み</button>
     </div>
-    <button id="addMaintBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold text-sm">＋ 新規予約・記録</button>
+    <button id="addMaintBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow">＋ 新規予約・記録</button>
     <div id="maintListActive" class="space-y-2"></div>
     <div id="maintListDone" class="space-y-2 hidden"></div>
   </section>
 
-  <!-- 設定タブ -->
   <section id="tab-settings" class="tab-content space-y-3">
     <div class="bg-white p-4 rounded-xl shadow-sm">
-      <h3 class="font-bold mb-2 text-slate-700">作業カテゴリの管理</h3>
+      <h3 class="font-bold mb-3 text-slate-700">🔧 作業カテゴリの管理</h3>
       <div class="flex gap-2 mb-3">
         <input type="text" id="newCategoryName" placeholder="新しいカテゴリ名" class="border border-slate-300 p-2 rounded-lg flex-1 text-sm">
         <button id="addCategoryBtn" class="bg-blue-600 text-white px-4 rounded-lg font-bold text-sm">追加</button>
@@ -105,7 +100,7 @@
       <ul id="categoryList" class="text-sm divide-y divide-slate-100"></ul>
     </div>
     <div class="bg-white p-4 rounded-xl shadow-sm">
-      <h3 class="font-bold mb-2 text-slate-700">店舗マスタの管理</h3>
+      <h3 class="font-bold mb-3 text-slate-700">🏪 店舗マスタの管理</h3>
       <div class="grid grid-cols-2 gap-2 mb-3">
         <input type="text" id="newShopName" placeholder="店舗名" class="border border-slate-300 p-2 rounded-lg text-sm">
         <input type="tel" id="newShopTel" placeholder="電話番号" class="border border-slate-300 p-2 rounded-lg text-sm">
@@ -116,595 +111,934 @@
   </section>
 </main>
 
+<!-- 車両詳細モーダル（タブ形式） -->
+<div id="carDetailModal" class="modal fixed inset-0 z-50 bg-black/60 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
+    <div class="bg-blue-700 text-white px-5 py-4 flex justify-between items-center flex-shrink-0">
+      <div>
+        <h2 id="detailCarName" class="font-bold text-xl"></h2>
+        <p id="detailCarSub" class="text-blue-200 text-xs mt-0.5"></p>
+      </div>
+      <button id="closeDetailModal" class="text-white text-3xl leading-none opacity-70 hover:opacity-100">&times;</button>
+    </div>
+    <div class="bg-blue-800 px-3 py-2 flex gap-1 text-xs font-semibold flex-shrink-0">
+      <button class="detail-tab-btn active flex-1 py-1.5 rounded-lg text-white/70 transition" data-dtarget="dtab-basic">📋 基本情報</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition" data-dtarget="dtab-insurance">🛡️ 保険</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition" data-dtarget="dtab-tire">🔵 タイヤ</button>
+    </div>
+    <div class="overflow-y-auto flex-1 p-4 space-y-3">
+
+      <div id="dtab-basic" class="detail-tab-content space-y-3">
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-slate-50 p-3 rounded-xl col-span-2">
+            <p class="text-xs text-slate-400 mb-1">走行距離</p>
+            <p id="d-odo" class="text-2xl font-black text-blue-700">- km</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">メーカー</p><p id="d-maker" class="font-bold">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">車種</p><p id="d-model" class="font-bold">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">型式</p><p id="d-type" class="font-bold">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">年式</p><p id="d-year" class="font-bold">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">ナンバー</p><p id="d-plate" class="font-bold">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">車台番号</p><p id="d-vin" class="font-bold text-xs">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">燃料種別</p><p id="d-fuel" class="font-bold">-</p></div>
+          <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">駆動方式</p><p id="d-drive" class="font-bold">-</p></div>
+          <div id="d-shaken-card" class="col-span-2 p-3 rounded-xl">
+            <p class="text-xs text-slate-400 mb-1">🔍 車検満了日</p>
+            <p id="d-shaken" class="font-bold text-lg">-</p>
+            <p id="d-shaken-days" class="text-xs mt-0.5"></p>
+          </div>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl">
+          <p class="font-bold text-indigo-700 text-sm mb-2">🔩 メンテナンススペック</p>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div><p class="text-slate-400">タイヤサイズ</p><p id="d-spec-tire" class="font-bold">-</p></div>
+            <div><p class="text-slate-400">指定空気圧</p><p id="d-spec-air" class="font-bold">-</p></div>
+            <div><p class="text-slate-400">オイル粘度</p><p id="d-spec-oil" class="font-bold">-</p></div>
+            <div><p class="text-slate-400">バッテリー型式</p><p id="d-spec-battery" class="font-bold">-</p></div>
+            <div class="col-span-2"><p class="text-slate-400">ワイパーサイズ</p><p id="d-spec-wiper" class="font-bold">-</p></div>
+          </div>
+        </div>
+        <button id="editCarBtn" class="w-full border-2 border-blue-600 text-blue-600 py-2.5 rounded-xl font-bold text-sm">✏️ 基本情報・スペックを編集</button>
+      </div>
+
+      <div id="dtab-insurance" class="detail-tab-content hidden space-y-3">
+        <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-4 rounded-2xl shadow-lg">
+          <div class="flex justify-between items-start mb-3">
+            <div><p class="text-blue-200 text-xs">任意保険</p><p id="ins-company" class="font-bold text-lg">-</p></div>
+            <span class="text-2xl">🛡️</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-sm mb-3">
+            <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">証券番号</p><p id="ins-policy" class="font-bold text-xs">-</p></div>
+            <div id="ins-expiry-card" class="p-2 rounded-lg"><p class="text-blue-200 text-xs">満了日</p><p id="ins-expiry" class="font-bold text-xs">-</p><p id="ins-expiry-days" class="text-xs"></p></div>
+            <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">等級</p><p id="ins-grade" class="font-bold text-xs">-</p></div>
+            <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">運転者/年齢条件</p><p id="ins-condition" class="font-bold text-xs">-</p></div>
+          </div>
+          <div class="bg-white/10 p-3 rounded-xl text-xs space-y-1 mb-3 whitespace-pre-wrap">
+            <p class="text-blue-200 font-bold mb-1">補償内容メモ</p>
+            <p id="ins-memo">-</p>
+          </div>
+          <div class="flex gap-2">
+            <div class="flex-1"><p class="text-blue-200 text-xs">担当者</p><p id="ins-staff" class="font-bold text-sm">-</p></div>
+            <a id="ins-tel-link" href="#" class="bg-green-500 hover:bg-green-400 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-1">📞 <span id="ins-tel-text">電話</span></a>
+          </div>
+          <div class="mt-2 text-xs text-blue-200">
+            <p>代理店: <span id="ins-agency">-</span></p>
+            <a id="ins-agency-tel-link" href="#" class="text-green-300 underline"><span id="ins-agency-tel-text"></span></a>
+          </div>
+        </div>
+
+        <div class="bg-gradient-to-br from-slate-600 to-slate-800 text-white p-4 rounded-2xl shadow-lg">
+          <div class="flex justify-between items-start mb-3">
+            <div><p class="text-slate-300 text-xs">自賠責保険</p><p id="jibai-policy-title" class="font-bold text-lg">-</p></div>
+            <span class="text-2xl">📄</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div class="bg-white/10 p-2 rounded-lg"><p class="text-slate-300 text-xs">証券番号</p><p id="jibai-policy" class="font-bold text-xs">-</p></div>
+            <div id="jibai-expiry-card" class="p-2 rounded-lg"><p class="text-slate-300 text-xs">満了日</p><p id="jibai-expiry" class="font-bold text-xs">-</p><p id="jibai-expiry-days" class="text-xs"></p></div>
+          </div>
+        </div>
+        <button id="editInsBtn" class="w-full border-2 border-blue-600 text-blue-600 py-2.5 rounded-xl font-bold text-sm">✏️ 保険情報を編集</button>
+      </div>
+
+      <div id="dtab-tire" class="detail-tab-content hidden space-y-3">
+        <div id="tire-summer-card" class="bg-orange-50 border border-orange-200 p-4 rounded-2xl">
+          <div class="flex justify-between items-center mb-2">
+            <p class="font-bold text-orange-700">☀️ 夏タイヤ</p>
+            <span id="tire-summer-age" class="text-xs px-2 py-0.5 rounded-full"></span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div><p class="text-xs text-slate-400">サイズ</p><p id="ts-size" class="font-bold">-</p></div>
+            <div><p class="text-xs text-slate-400">ブランド</p><p id="ts-brand" class="font-bold">-</p></div>
+            <div><p class="text-xs text-slate-400">製造年週(4桁)</p><p id="ts-made" class="font-bold">-</p></div>
+            <div><p class="text-xs text-slate-400">装着日</p><p id="ts-date" class="font-bold">-</p></div>
+          </div>
+        </div>
+        <div id="tire-winter-card" class="bg-blue-50 border border-blue-200 p-4 rounded-2xl">
+          <div class="flex justify-between items-center mb-2">
+            <p class="font-bold text-blue-700">❄️ スタッドレス</p>
+            <span id="tire-winter-age" class="text-xs px-2 py-0.5 rounded-full"></span>
+          </div>
+          <div class="grid grid-cols-2 gap-2 text-sm">
+            <div><p class="text-xs text-slate-400">サイズ</p><p id="tw-size" class="font-bold">-</p></div>
+            <div><p class="text-xs text-slate-400">ブランド</p><p id="tw-brand" class="font-bold">-</p></div>
+            <div><p class="text-xs text-slate-400">製造年週(4桁)</p><p id="tw-made" class="font-bold">-</p></div>
+            <div><p class="text-xs text-slate-400">保管場所</p><p id="tw-storage" class="font-bold">-</p></div>
+          </div>
+        </div>
+        <button id="editTireBtn" class="w-full border-2 border-blue-600 text-blue-600 py-2.5 rounded-xl font-bold text-sm">✏️ タイヤ情報を編集</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 車両追加/編集モーダル -->
-<div id="carModal" class="modal fixed inset-0 z-40 bg-black/50 items-center justify-center p-3">
-  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3">
-    <div class="flex justify-between items-center">
-      <h2 class="font-bold text-lg">車両情報</h2>
+<div id="carModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
+      <h2 id="carModalTitle" class="font-bold text-lg">車両情報を登録</h2>
       <button id="closeCarModal" class="text-2xl text-slate-400">&times;</button>
     </div>
-    <input type="hidden" id="carDocId">
-    <div class="grid grid-cols-2 gap-2 text-sm">
-      <input type="text" id="cNickname" placeholder="ニックネーム*" class="border p-2 rounded-lg col-span-2">
-      <input type="text" id="cMaker" placeholder="メーカー" class="border p-2 rounded-lg">
-      <input type="text" id="cModel" placeholder="車種" class="border p-2 rounded-lg">
-      <input type="number" id="cYear" placeholder="年式" class="border p-2 rounded-lg">
-      <input type="text" id="cPlate" placeholder="ナンバー" class="border p-2 rounded-lg">
-      <input type="number" id="cOdo" placeholder="現在の走行距離(km)" class="border p-2 rounded-lg col-span-2">
-      <div><label class="text-xs text-slate-500">車検満了日</label><input type="date" id="cShaken" class="border p-2 rounded-lg w-full"></div>
-      <div><label class="text-xs text-slate-500">自賠責満了日</label><input type="date" id="cJibai" class="border p-2 rounded-lg w-full"></div>
-      <input type="text" id="cInsCompany" placeholder="任意保険会社名" class="border p-2 rounded-lg col-span-2">
-      <input type="text" id="cInsStaff" placeholder="担当者名" class="border p-2 rounded-lg">
-      <input type="tel" id="cInsTel" placeholder="担当者電話番号" class="border p-2 rounded-lg">
-      <div><label class="text-xs text-slate-500">任意保険満了日</label><input type="date" id="cInsExpiry" class="border p-2 rounded-lg w-full"></div>
+    <div class="p-5 grid grid-cols-2 gap-3 text-sm">
+      <input type="hidden" id="carDocId">
+      <input type="text" id="cNickname" placeholder="ニックネーム*" class="border p-2.5 rounded-xl col-span-2">
+      <input type="text" id="cMaker" placeholder="メーカー" class="border p-2.5 rounded-xl">
+      <input type="text" id="cModel" placeholder="車種" class="border p-2.5 rounded-xl">
+      <input type="text" id="cCarType" placeholder="型式（例：GFC28）" class="border p-2.5 rounded-xl">
+      <input type="text" id="cYear" placeholder="初度登録（例：令和7年3月）" class="border p-2.5 rounded-xl">
+      <input type="text" id="cPlate" placeholder="ナンバー" class="border p-2.5 rounded-xl col-span-2">
+      <input type="text" id="cVin" placeholder="車台番号" class="border p-2.5 rounded-xl col-span-2">
+      <select id="cFuelType" class="border p-2.5 rounded-xl">
+        <option value="">燃料種別</option><option>ガソリン</option><option>ハイブリッド</option><option>軽油</option><option>EV</option><option>PHEV</option>
+      </select>
+      <select id="cDriveType" class="border p-2.5 rounded-xl">
+        <option value="">駆動方式</option><option>FF</option><option>FR</option><option>4WD</option><option>AWD</option>
+      </select>
+      <input type="number" id="cOdo" placeholder="現在の走行距離(km)" class="border p-2.5 rounded-xl col-span-2">
+      <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">車検満了日</label><input type="date" id="cShaken" class="border p-2.5 rounded-xl w-full"></div>
+
+      <div class="col-span-2 border-t pt-3 mt-1">
+        <p class="text-xs font-bold text-indigo-700 mb-2">🔩 メンテナンススペック（任意）</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="cSpecTire" placeholder="タイヤサイズ" class="border p-2.5 rounded-xl">
+          <input type="text" id="cSpecAir" placeholder="指定空気圧" class="border p-2.5 rounded-xl">
+          <input type="text" id="cSpecOil" placeholder="オイル粘度（例:0W-20）" class="border p-2.5 rounded-xl">
+          <input type="text" id="cSpecBattery" placeholder="バッテリー型式" class="border p-2.5 rounded-xl">
+          <input type="text" id="cSpecWiper" placeholder="ワイパーサイズ" class="border p-2.5 rounded-xl col-span-2">
+        </div>
+      </div>
+      <button id="saveCarBtn" class="col-span-2 bg-blue-600 text-white py-3 rounded-xl font-bold shadow">保存する</button>
     </div>
-    <button id="saveCarBtn" class="w-full bg-blue-600 text-white py-2.5 rounded-lg font-bold">保存する</button>
+  </div>
+</div>
+
+<!-- 保険情報編集モーダル -->
+<div id="insModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
+      <h2 class="font-bold text-lg">🛡️ 保険情報を編集</h2>
+      <button id="closeInsModal" class="text-2xl text-slate-400">&times;</button>
+    </div>
+    <div class="p-5 space-y-4 text-sm">
+      <input type="hidden" id="insCarDocId">
+      <div class="bg-blue-50 p-3 rounded-xl">
+        <p class="font-bold text-blue-800 mb-3">任意保険</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="iCompany" placeholder="保険会社名（証券に記載なければ空欄でOK）" class="border p-2.5 rounded-xl col-span-2">
+          <input type="text" id="iPolicy" placeholder="証券番号" class="border p-2.5 rounded-xl col-span-2">
+          <input type="text" id="iGrade" placeholder="等級（例：15等級/0年）" class="border p-2.5 rounded-xl">
+          <input type="text" id="iCondition" placeholder="運転者限定/年齢条件" class="border p-2.5 rounded-xl">
+          <input type="text" id="iStaff" placeholder="担当者名" class="border p-2.5 rounded-xl">
+          <input type="tel" id="iTel" placeholder="担当者電話番号" class="border p-2.5 rounded-xl">
+          <input type="text" id="iAgency" placeholder="代理店名" class="border p-2.5 rounded-xl">
+          <input type="tel" id="iAgencyTel" placeholder="代理店電話番号" class="border p-2.5 rounded-xl">
+          <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">任意保険満了日</label><input type="date" id="iExpiry" class="border p-2.5 rounded-xl w-full"></div>
+          <textarea id="iMemo" placeholder="補償内容メモ（対人無制限、対物無制限、車両保険400万、ロードアシスタンス15万など）" class="border p-2.5 rounded-xl col-span-2 h-24 resize-none text-xs"></textarea>
+        </div>
+      </div>
+      <div class="bg-slate-50 p-3 rounded-xl">
+        <p class="font-bold text-slate-700 mb-3">自賠責保険</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="jPolicy" placeholder="証券番号" class="border p-2.5 rounded-xl col-span-2">
+          <div><label class="text-xs text-slate-500 block mb-1">保険開始日</label><input type="date" id="jStart" class="border p-2.5 rounded-xl w-full"></div>
+          <div><label class="text-xs text-slate-500 block mb-1">満了日</label><input type="date" id="jExpiry" class="border p-2.5 rounded-xl w-full"></div>
+        </div>
+      </div>
+      <button id="saveInsBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow">保険情報を保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- タイヤ情報編集モーダル -->
+<div id="tireModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
+      <h2 class="font-bold text-lg">🔵 タイヤ情報を編集</h2>
+      <button id="closeTireModal" class="text-2xl text-slate-400">&times;</button>
+    </div>
+    <div class="p-5 space-y-4 text-sm">
+      <input type="hidden" id="tireCarDocId">
+      <div class="bg-orange-50 p-3 rounded-xl">
+        <p class="font-bold text-orange-700 mb-3">☀️ 夏タイヤ</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="tsSze" placeholder="サイズ（例：215/50R17）" class="border p-2.5 rounded-xl col-span-2">
+          <input type="text" id="tsBrand" placeholder="ブランド" class="border p-2.5 rounded-xl">
+          <input type="text" id="tsMade" placeholder="製造年週4桁（例：2423）" maxlength="4" class="border p-2.5 rounded-xl">
+          <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">装着日</label><input type="date" id="tsDate" class="border p-2.5 rounded-xl w-full"></div>
+        </div>
+      </div>
+      <div class="bg-blue-50 p-3 rounded-xl">
+        <p class="font-bold text-blue-700 mb-3">❄️ スタッドレス</p>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="twSze" placeholder="サイズ（例：215/50R17）" class="border p-2.5 rounded-xl col-span-2">
+          <input type="text" id="twBrand" placeholder="ブランド" class="border p-2.5 rounded-xl">
+          <input type="text" id="twMade" placeholder="製造年週4桁（例：2318）" maxlength="4" class="border p-2.5 rounded-xl">
+          <input type="text" id="twStorage" placeholder="保管場所" class="border p-2.5 rounded-xl col-span-2">
+        </div>
+      </div>
+      <button id="saveTireBtn" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold shadow">タイヤ情報を保存</button>
+    </div>
   </div>
 </div>
 
 <!-- メンテ追加/完了モーダル -->
-<div id="maintModal" class="modal fixed inset-0 z-40 bg-black/50 items-center justify-center p-3">
-  <div class="fade-in bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-5 space-y-3">
-    <div class="flex justify-between items-center">
-      <h2 class="font-bold text-lg">メンテナンス予約・記録</h2>
+<div id="maintModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
+      <h2 class="font-bold text-lg">🔧 メンテナンス予約・記録</h2>
       <button id="closeMaintModal" class="text-2xl text-slate-400">&times;</button>
     </div>
-    <input type="hidden" id="maintDocId">
-    <div class="grid grid-cols-2 gap-2 text-sm">
-      <select id="mCategory" class="border p-2 rounded-lg col-span-2"></select>
-      <select id="mShop" class="border p-2 rounded-lg col-span-2"></select>
-      <input type="text" id="mStaff" placeholder="担当者名" class="border p-2 rounded-lg col-span-2">
-      <div><label class="text-xs text-slate-500">予約日</label><input type="date" id="mResDate" class="border p-2 rounded-lg w-full"></div>
-      <div><label class="text-xs text-slate-500">予約時間</label><input type="time" id="mResTime" class="border p-2 rounded-lg w-full"></div>
-      <input type="text" id="mMemo" placeholder="備考" class="border p-2 rounded-lg col-span-2">
-      <hr class="col-span-2 my-1">
-      <p class="col-span-2 text-xs text-slate-400">↓完了時に入力（未実施なら空欄でOK）</p>
-      <div><label class="text-xs text-slate-500">実施日</label><input type="date" id="mDoneDate" class="border p-2 rounded-lg w-full"></div>
-      <input type="number" id="mDoneOdo" placeholder="実施時ODO(km)" class="border p-2 rounded-lg">
-      <input type="number" id="mCost" placeholder="実際の費用(円)" class="border p-2 rounded-lg">
-      <input type="text" id="mWork" placeholder="作業内容" class="border p-2 rounded-lg">
-      <div class="col-span-2"><label class="text-xs text-slate-500">次回予定日</label><input type="date" id="mNext" class="border p-2 rounded-lg w-full"></div>
-    </div>
-    <div class="flex gap-2">
-      <button id="saveMaintReserveBtn" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-lg font-bold text-sm">予約として保存</button>
-      <button id="saveMaintDoneBtn" class="flex-1 bg-green-600 text-white py-2.5 rounded-lg font-bold text-sm">✅ 完了にする</button>
+    <div class="p-5 grid grid-cols-2 gap-3 text-sm">
+      <input type="hidden" id="maintDocId">
+      <select id="mCategory" class="border p-2.5 rounded-xl col-span-2"></select>
+      <select id="mShop" class="border p-2.5 rounded-xl col-span-2"></select>
+      <input type="text" id="mStaff" placeholder="担当者名" class="border p-2.5 rounded-xl col-span-2">
+      <div><label class="text-xs text-slate-500 block mb-1">予約日</label><input type="date" id="mResDate" class="border p-2.5 rounded-xl w-full"></div>
+      <div><label class="text-xs text-slate-500 block mb-1">予約時間</label><input type="time" id="mResTime" class="border p-2.5 rounded-xl w-full"></div>
+      <input type="text" id="mMemo" placeholder="備考" class="border p-2.5 rounded-xl col-span-2">
+      <div class="col-span-2 border-t pt-3">
+        <p class="text-xs text-slate-400 mb-2">↓ 完了時に入力（未実施なら空欄でOK）</p>
+        <div class="grid grid-cols-2 gap-2">
+          <div><label class="text-xs text-slate-500 block mb-1">実施日</label><input type="date" id="mDoneDate" class="border p-2.5 rounded-xl w-full"></div>
+          <input type="number" id="mDoneOdo" placeholder="実施時ODO(km)" class="border p-2.5 rounded-xl">
+          <input type="number" id="mCost" placeholder="実際の費用(円)" class="border p-2.5 rounded-xl">
+          <input type="text" id="mWork" placeholder="作業内容" class="border p-2.5 rounded-xl">
+          <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">次回予定日</label><input type="date" id="mNext" class="border p-2.5 rounded-xl w-full"></div>
+        </div>
+      </div>
+      <button id="saveMaintReserveBtn" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-sm">予約として保存</button>
+      <button id="saveMaintDoneBtn" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm">✅ 完了にする</button>
     </div>
   </div>
 </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import {
-  getAuth,
-  GoogleAuthProvider,
-  signInWithRedirect,
-  signInWithPopup,
-  getRedirectResult,
-  onAuthStateChanged,
-  signOut,
-  setPersistence,
-  browserLocalPersistence
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth, GoogleAuthProvider, signInWithRedirect, signInWithPopup, getRedirectResult,
+  onAuthStateChanged, signOut, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, collection, doc, addDoc, getDoc, getDocs,
+  updateDoc, deleteDoc, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  import { getFirestore, collection, doc, addDoc, getDoc, getDocs, updateDoc, deleteDoc, query, orderBy, serverTimestamp }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+// ★ ご自身のFirebase設定に書き換えてください ★
+const firebaseConfig = {
+  apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
+  authDomain: "my-car-manager-daab9.firebaseapp.com",
+  projectId: "my-car-manager-daab9",
+  storageBucket: "my-car-manager-daab9.firebasestorage.app",
+  messagingSenderId: "287236190745",
+  appId: "1:287236190745:web:caa18d35701205aa0db088"
+};
 
-  // ご自身のFirebase設定（storageBucketは今のままでOK。新しいプロジェクトでは
-  // "〜.firebasestorage.app" 形式が正しい標準の値です）
-  const firebaseConfig = {
-    apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
-    authDomain: "my-car-manager-daab9.firebaseapp.com",
-    projectId: "my-car-manager-daab9",
-    storageBucket: "my-car-manager-daab9.firebasestorage.app",
-    messagingSenderId: "287236190745",
-    appId: "1:287236190745:web:caa18d35701205aa0db088"
-  };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+let currentUser = null;
+let currentCarId = null;
+let currentDetailCarData = null;
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
-  let currentUser = null;
-  let currentCarId = null;
+const $ = id => document.getElementById(id);
 
-  const $ = (id) => document.getElementById(id);
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const t = new Date(dateStr); t.setHours(0,0,0,0);
+  const n = new Date(); n.setHours(0,0,0,0);
+  return Math.ceil((t - n) / 86400000);
+}
+function expiryBadge(days) {
+  if (days === null) return { cls: 'bg-slate-100 text-slate-400', label: '未設定' };
+  if (days < 0)  return { cls: 'bg-red-100 text-red-700', label: `${Math.abs(days)}日超過` };
+  if (days <= 30) return { cls: 'bg-red-100 text-red-700', label: `残り${days}日` };
+  if (days <= 60) return { cls: 'bg-yellow-100 text-yellow-700', label: `残り${days}日` };
+  return { cls: 'bg-green-100 text-green-700', label: `残り${days}日` };
+}
+function reserveColor(days) {
+  if (days === null) return 'bg-slate-100 text-slate-400';
+  if (days < 0) return 'bg-red-200 text-red-800';
+  if (days <= 3) return 'bg-red-100 text-red-700';
+  if (days <= 7) return 'bg-yellow-100 text-yellow-700';
+  return 'bg-blue-100 text-blue-700';
+}
+// タイヤDOTコード（4桁＝週2桁+年2桁）から経過年数を計算する
+// 例："2423" → 前半"24"=製造週、後半"23"=製造年(2023年)
+function tireAgeBadge(madeCode) {
+  if (!madeCode || !/^\d{4}$/.test(madeCode)) return null;
+  const week = parseInt(madeCode.slice(0, 2), 10);
+  const year = 2000 + parseInt(madeCode.slice(2, 4), 10); // 末尾2桁が年
+  const age = new Date().getFullYear() - year;
+  if (age >= 6) return { cls: 'bg-red-100 text-red-700', label: `${year}年${week}週製造・要交換検討` };
+  if (age >= 4) return { cls: 'bg-yellow-100 text-yellow-700', label: `${year}年製造・${age}年経過` };
+  return { cls: 'bg-green-100 text-green-700', label: `${year}年製造・${age}年経過` };
+}
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-sm px-5 py-2.5 rounded-full shadow-lg z-[100] transition-opacity';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; setTimeout(() => t.remove(), 400); }, 2000);
+}
 
-
-// ホーム画面から起動された（standaloneモードの）PWAかどうかを判定する。
-// navigator.standalone は iOS Safari 固有のプロパティで、matchMedia は
-// より標準的な判定方法。両方をチェックすることで判定の確実性を高めている。
+// ---------- 認証（standaloneモードではポップアップに切替） ----------
 function isStandalonePWA() {
   return window.navigator.standalone === true
       || window.matchMedia('(display-mode: standalone)').matches;
 }
-
 async function doLogin() {
   try {
     await setPersistence(auth, browserLocalPersistence);
     const provider = new GoogleAuthProvider();
-
     if (isStandalonePWA()) {
-      // ホーム画面のアイコンから開いた場合は、
-      // redirect方式だとiOSのITP制限でログイン結果が受け取れずループするため、
-      // ポップアップ（別窓）方式でログインする
       await signInWithPopup(auth, provider);
-      // 成功すると onAuthStateChanged が自動的に反応して画面が切り替わる
     } else {
-      // 通常のSafariタブやPCブラウザではこれまで通りredirect方式を使う
       await signInWithRedirect(auth, provider);
     }
   } catch (err) {
-    // ユーザーが自分でポップアップを閉じた／キャンセルした場合はエラー表示しない
     if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-      alert("ログイン開始エラー\nコード: " + err.code + "\n内容: " + err.message);
+      alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
     }
   }
 }
+$('loginBtn').addEventListener('click', doLogin);
+$('loginBtnMain').addEventListener('click', () => { $('loginStatus').classList.remove('hidden'); doLogin(); });
+$('logoutBtn').addEventListener('click', () => signOut(auth));
 
-  $('loginBtn').addEventListener('click', doLogin);
-  $('loginBtnMain').addEventListener('click', () => {
-    $('loginStatus').classList.remove('hidden');
-    doLogin();
-  });
-  $('logoutBtn').addEventListener('click', () => signOut(auth));
+getRedirectResult(auth).catch(err => {
+  alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
+});
 
-  getRedirectResult(auth)
-    .then((result) => { if (result?.user) console.log("ログイン成功:", result.user.displayName); })
-    .catch((err) => {
-      alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
-    });
-
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      currentUser = user;
-      $('loginBtn').classList.add('hidden');
-      $('logoutBtn').classList.remove('hidden');
-      $('unauthScreen').classList.add('hidden');
-      $('authScreen').classList.remove('hidden');
-      await loadCategories();
-      await loadShops();
-      await loadCars();
-    } else {
-      currentUser = null;
-      $('loginBtn').classList.remove('hidden');
-      $('logoutBtn').classList.add('hidden');
-      $('unauthScreen').classList.remove('hidden');
-      $('authScreen').classList.add('hidden');
-    }
-  });
-
-  // ---------- タブ切り替え ----------
-  document.querySelectorAll('.tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      $(btn.dataset.target).classList.add('active');
-    });
-  });
-  document.querySelectorAll('.maintSub').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      $('maintListActive').classList.toggle('hidden', btn.dataset.status !== 'active');
-      $('maintListDone').classList.toggle('hidden', btn.dataset.status !== 'done');
-    });
-  });
-
-  // ---------- 共通：残り日数と色 ----------
-  function daysUntil(dateStr) {
-    if (!dateStr) return null;
-    const t = new Date(dateStr); t.setHours(0,0,0,0);
-    const n = new Date(); n.setHours(0,0,0,0);
-    return Math.ceil((t - n) / 86400000);
+onAuthStateChanged(auth, async user => {
+  if (user) {
+    currentUser = user;
+    $('loginBtn').classList.add('hidden');
+    $('logoutBtn').classList.remove('hidden');
+    $('unauthScreen').classList.add('hidden');
+    $('authScreen').classList.remove('hidden');
+    await loadCategories();
+    await loadShops();
+    await loadCars();
+  } else {
+    currentUser = null;
+    $('loginBtn').classList.remove('hidden');
+    $('logoutBtn').classList.add('hidden');
+    $('unauthScreen').classList.remove('hidden');
+    $('authScreen').classList.add('hidden');
   }
-  function expiryColor(days) {
-    if (days === null) return 'bg-slate-100 text-slate-400';
-    if (days <= 30) return 'bg-red-100 text-red-700';
-    if (days <= 60) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-green-100 text-green-700';
-  }
-  function reserveColor(days) {
-    if (days === null) return 'bg-slate-100 text-slate-400';
-    if (days < 0) return 'bg-red-200 text-red-800';
-    if (days <= 3) return 'bg-red-100 text-red-700';
-    if (days <= 7) return 'bg-yellow-100 text-yellow-700';
-    return 'bg-blue-100 text-blue-700';
-  }
+});
 
-  // ---------- カテゴリ管理 ----------
-  async function loadCategories() {
-    const colRef = collection(db, `users/${currentUser.uid}/categories`);
-    let snap = await getDocs(query(colRef, orderBy('createdAt')));
-    if (snap.empty) {
-      const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換",
-        "エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
-      for (const name of defaults) await addDoc(colRef, { name, createdAt: serverTimestamp() });
-      snap = await getDocs(query(colRef, orderBy('createdAt')));
-    }
-    const listEl = $('categoryList'); const selectEl = $('mCategory');
-    listEl.innerHTML = ''; selectEl.innerHTML = '';
-    snap.forEach(d => {
-      const data = d.data();
-      const li = document.createElement('li');
-      li.className = 'flex items-center gap-2 py-1.5';
-      li.innerHTML = `
-        <input type="text" value="${data.name}" data-id="${d.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
-        <button class="catDelBtn text-red-500 text-xs font-bold px-2" data-id="${d.id}">削除</button>`;
-      listEl.appendChild(li);
-      const opt = document.createElement('option');
-      opt.value = data.name; opt.textContent = data.name;
-      selectEl.appendChild(opt);
-    });
-    listEl.querySelectorAll('.catEditInput').forEach(inp => {
-      inp.addEventListener('change', async () => {
-        const newName = inp.value.trim();
-        if (!newName) return;
-        await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: newName });
-        loadCategories();
-      });
-    });
-    listEl.querySelectorAll('.catDelBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('このカテゴリを削除しますか？')) return;
-        await deleteDoc(doc(db, `users/${currentUser.uid}/categories`, btn.dataset.id));
-        loadCategories();
-      });
-    });
-  }
-  $('addCategoryBtn').addEventListener('click', async () => {
-    const name = $('newCategoryName').value.trim();
-    if (!name) return;
-    await addDoc(collection(db, `users/${currentUser.uid}/categories`), { name, createdAt: serverTimestamp() });
-    $('newCategoryName').value = '';
-    loadCategories();
+// ---------- タブ切り替え ----------
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    $(btn.dataset.target).classList.add('active');
   });
-
-  // ---------- 店舗マスタ管理 ----------
-  async function loadShops() {
-    const colRef = collection(db, `users/${currentUser.uid}/shops`);
-    const snap = await getDocs(query(colRef, orderBy('createdAt')));
-    const listEl = $('shopList'); const selectEl = $('mShop');
-    listEl.innerHTML = ''; selectEl.innerHTML = '<option value="">店舗を選択</option>';
-    snap.forEach(d => {
-      const data = d.data();
-      const li = document.createElement('li');
-      li.className = 'flex justify-between items-center py-1.5 text-sm';
-      li.innerHTML = `<span>${data.name}（${data.tel || '-'}）</span>
-        <button class="shopDelBtn text-red-500 text-xs font-bold" data-id="${d.id}">削除</button>`;
-      listEl.appendChild(li);
-      const opt = document.createElement('option');
-      opt.value = d.id; opt.textContent = data.name;
-      selectEl.appendChild(opt);
-    });
-    listEl.querySelectorAll('.shopDelBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('この店舗を削除しますか？')) return;
-        await deleteDoc(doc(db, `users/${currentUser.uid}/shops`, btn.dataset.id));
-        loadShops();
-      });
-    });
-  }
-  $('addShopBtn').addEventListener('click', async () => {
-    const name = $('newShopName').value.trim();
-    if (!name) return;
-    await addDoc(collection(db, `users/${currentUser.uid}/shops`), {
-      name, tel: $('newShopTel').value.trim(), createdAt: serverTimestamp()
-    });
-    $('newShopName').value = ''; $('newShopTel').value = '';
-    loadShops();
+});
+document.querySelectorAll('.maintSub').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    $('maintListActive').classList.toggle('hidden', btn.dataset.status !== 'active');
+    $('maintListDone').classList.toggle('hidden', btn.dataset.status !== 'done');
   });
-
-  // ---------- 車両管理 ----------
-  $('addCarBtn').addEventListener('click', () => {
-    $('carDocId').value = '';
-    document.querySelectorAll('#carModal input:not([type=hidden])').forEach(i => i.value = '');
-    $('carModal').classList.add('active');
+});
+document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
+    btn.classList.add('active');
+    $(btn.dataset.dtarget).classList.remove('hidden');
   });
-  $('closeCarModal').addEventListener('click', () => $('carModal').classList.remove('active'));
+});
 
-  $('saveCarBtn').addEventListener('click', async () => {
-    const nickname = $('cNickname').value.trim();
-    if (!nickname) return alert('ニックネームは必須です');
-    const data = {
-      nickname, maker: $('cMaker').value, model: $('cModel').value,
-      year: $('cYear').value, plate: $('cPlate').value,
-      odo: Number($('cOdo').value) || 0,
-      shaken: $('cShaken').value, jibai: $('cJibai').value,
-      insCompany: $('cInsCompany').value, insStaff: $('cInsStaff').value,
-      insTel: $('cInsTel').value, insExpiry: $('cInsExpiry').value,
-      updatedAt: serverTimestamp()
-    };
-    const docId = $('carDocId').value;
-    if (docId) {
-      await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), data);
-    } else {
-      const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
-      if (snap.size >= 5) return alert('登録できる車両は5台までです');
-      data.createdAt = serverTimestamp();
-      await addDoc(collection(db, `users/${currentUser.uid}/cars`), data);
-    }
-    $('carModal').classList.remove('active');
-    loadCars();
+// ---------- 車両詳細モーダル ----------
+function openDetailModal(carId, carData) {
+  currentDetailCarData = { id: carId, ...carData };
+  $('detailCarName').textContent = carData.nickname;
+  $('detailCarSub').textContent = `${carData.maker||''} ${carData.model||''} ${carData.plate ? '／ '+carData.plate : ''}`;
+
+  $('d-odo').textContent = (carData.odo||0).toLocaleString() + ' km';
+  $('d-maker').textContent = carData.maker||'-';
+  $('d-model').textContent = carData.model||'-';
+  $('d-type').textContent = carData.carType||'-';
+  $('d-year').textContent = carData.year||'-';
+  $('d-plate').textContent = carData.plate||'-';
+  $('d-vin').textContent = carData.vin||'-';
+  $('d-fuel').textContent = carData.fuelType||'-';
+  $('d-drive').textContent = carData.driveType||'-';
+  const shakenDays = daysUntil(carData.shaken);
+  const shakenBadge = expiryBadge(shakenDays);
+  $('d-shaken').textContent = carData.shaken||'未設定';
+  $('d-shaken-days').textContent = shakenDays !== null ? shakenBadge.label : '';
+  $('d-shaken-card').className = `col-span-2 p-3 rounded-xl ${shakenBadge.cls}`;
+
+  const sp = carData.specs || {};
+  $('d-spec-tire').textContent = sp.tireSize||'-';
+  $('d-spec-air').textContent = sp.tirePressure||'-';
+  $('d-spec-oil').textContent = sp.oilViscosity||'-';
+  $('d-spec-battery').textContent = sp.batteryModel||'-';
+  $('d-spec-wiper').textContent = sp.wiperSize||'-';
+
+  const ins = carData.insurance || {};
+  $('ins-company').textContent = ins.company || '未登録（証券で要確認）';
+  $('ins-policy').textContent = ins.policyNo||'-';
+  $('ins-grade').textContent = ins.grade||'-';
+  $('ins-condition').textContent = ins.condition||'-';
+  $('ins-staff').textContent = ins.staffName||'-';
+  $('ins-memo').textContent = ins.memo||'-';
+  $('ins-agency').textContent = ins.agencyName||'-';
+  const insTel = ins.staffTel||'';
+  $('ins-tel-link').href = insTel ? `tel:${insTel}` : '#';
+  $('ins-tel-text').textContent = insTel||'未登録';
+  const insAgencyTel = ins.agencyTel||'';
+  $('ins-agency-tel-link').href = insAgencyTel ? `tel:${insAgencyTel}` : '#';
+  $('ins-agency-tel-text').textContent = insAgencyTel;
+  const insExpDays = daysUntil(ins.expiry);
+  const insExpBadge = expiryBadge(insExpDays);
+  $('ins-expiry').textContent = ins.expiry||'未設定';
+  $('ins-expiry-days').textContent = insExpDays !== null ? insExpBadge.label : '';
+  $('ins-expiry-card').className = `p-2 rounded-lg ${insExpBadge.cls}`;
+
+  const jibai = carData.jibaiInsurance || {};
+  $('jibai-policy-title').textContent = jibai.policyNo ? '自賠責' : '未登録';
+  $('jibai-policy').textContent = jibai.policyNo||'-';
+  const jibaiExpDays = daysUntil(jibai.expiry);
+  const jibaiExpBadge = expiryBadge(jibaiExpDays);
+  $('jibai-expiry').textContent = jibai.expiry||'未設定';
+  $('jibai-expiry-days').textContent = jibaiExpDays !== null ? jibaiExpBadge.label : '';
+  $('jibai-expiry-card').className = `p-2 rounded-lg ${jibaiExpBadge.cls}`;
+
+  const tire = carData.tire || {};
+  const ts = tire.summer || {};
+  const tw = tire.winter || {};
+  $('ts-size').textContent = ts.size||'-';
+  $('ts-brand').textContent = ts.brand||'-';
+  $('ts-made').textContent = ts.made||'-';
+  $('ts-date').textContent = ts.date||'-';
+  const tsBadge = tireAgeBadge(ts.made);
+  $('tire-summer-age').textContent = tsBadge ? tsBadge.label : '';
+  $('tire-summer-age').className = `text-xs px-2 py-0.5 rounded-full ${tsBadge ? tsBadge.cls : ''}`;
+
+  $('tw-size').textContent = tw.size||'-';
+  $('tw-brand').textContent = tw.brand||'-';
+  $('tw-made').textContent = tw.made||'-';
+  $('tw-storage').textContent = tw.storage||'-';
+  const twBadge = tireAgeBadge(tw.made);
+  $('tire-winter-age').textContent = twBadge ? twBadge.label : '';
+  $('tire-winter-age').className = `text-xs px-2 py-0.5 rounded-full ${twBadge ? twBadge.cls : ''}`;
+
+  document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
+  document.querySelector('[data-dtarget="dtab-basic"]').classList.add('active');
+  $('dtab-basic').classList.remove('hidden');
+
+  $('carDetailModal').classList.add('active');
+}
+$('closeDetailModal').addEventListener('click', () => $('carDetailModal').classList.remove('active'));
+
+$('editCarBtn').addEventListener('click', () => {
+  if (!currentDetailCarData) return;
+  const c = currentDetailCarData;
+  const sp = c.specs || {};
+  $('carDocId').value = c.id;
+  $('carModalTitle').textContent = '車両情報を編集';
+  $('cNickname').value = c.nickname||''; $('cMaker').value = c.maker||''; $('cModel').value = c.model||'';
+  $('cCarType').value = c.carType||''; $('cYear').value = c.year||''; $('cPlate').value = c.plate||'';
+  $('cVin').value = c.vin||''; $('cFuelType').value = c.fuelType||''; $('cDriveType').value = c.driveType||'';
+  $('cOdo').value = c.odo||''; $('cShaken').value = c.shaken||'';
+  $('cSpecTire').value = sp.tireSize||''; $('cSpecAir').value = sp.tirePressure||'';
+  $('cSpecOil').value = sp.oilViscosity||''; $('cSpecBattery').value = sp.batteryModel||''; $('cSpecWiper').value = sp.wiperSize||'';
+  $('carDetailModal').classList.remove('active');
+  $('carModal').classList.add('active');
+});
+
+$('editInsBtn').addEventListener('click', () => {
+  if (!currentDetailCarData) return;
+  const ins = currentDetailCarData.insurance || {};
+  const jibai = currentDetailCarData.jibaiInsurance || {};
+  $('insCarDocId').value = currentDetailCarData.id;
+  $('iCompany').value = ins.company||''; $('iPolicy').value = ins.policyNo||'';
+  $('iGrade').value = ins.grade||''; $('iCondition').value = ins.condition||'';
+  $('iStaff').value = ins.staffName||''; $('iTel').value = ins.staffTel||'';
+  $('iAgency').value = ins.agencyName||''; $('iAgencyTel').value = ins.agencyTel||'';
+  $('iExpiry').value = ins.expiry||''; $('iMemo').value = ins.memo||'';
+  $('jPolicy').value = jibai.policyNo||''; $('jStart').value = jibai.start||''; $('jExpiry').value = jibai.expiry||'';
+  $('carDetailModal').classList.remove('active');
+  $('insModal').classList.add('active');
+});
+$('closeInsModal').addEventListener('click', () => $('insModal').classList.remove('active'));
+$('saveInsBtn').addEventListener('click', async () => {
+  const docId = $('insCarDocId').value;
+  if (!docId) return;
+  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), {
+    insurance: {
+      company: $('iCompany').value, policyNo: $('iPolicy').value,
+      grade: $('iGrade').value, condition: $('iCondition').value,
+      staffName: $('iStaff').value, staffTel: $('iTel').value,
+      agencyName: $('iAgency').value, agencyTel: $('iAgencyTel').value,
+      expiry: $('iExpiry').value, memo: $('iMemo').value
+    },
+    jibaiInsurance: { policyNo: $('jPolicy').value, start: $('jStart').value, expiry: $('jExpiry').value },
+    updatedAt: serverTimestamp()
   });
+  showToast('保険情報を保存しました');
+  $('insModal').classList.remove('active');
+  await loadCars();
+});
 
-  async function loadCars() {
+$('editTireBtn').addEventListener('click', () => {
+  if (!currentDetailCarData) return;
+  const tire = currentDetailCarData.tire || {};
+  const ts = tire.summer || {}; const tw = tire.winter || {};
+  $('tireCarDocId').value = currentDetailCarData.id;
+  $('tsSze').value = ts.size||''; $('tsBrand').value = ts.brand||''; $('tsMade').value = ts.made||''; $('tsDate').value = ts.date||'';
+  $('twSze').value = tw.size||''; $('twBrand').value = tw.brand||''; $('twMade').value = tw.made||''; $('twStorage').value = tw.storage||'';
+  $('carDetailModal').classList.remove('active');
+  $('tireModal').classList.add('active');
+});
+$('closeTireModal').addEventListener('click', () => $('tireModal').classList.remove('active'));
+$('saveTireBtn').addEventListener('click', async () => {
+  const docId = $('tireCarDocId').value;
+  if (!docId) return;
+  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), {
+    tire: {
+      summer: { size: $('tsSze').value, brand: $('tsBrand').value, made: $('tsMade').value, date: $('tsDate').value },
+      winter: { size: $('twSze').value, brand: $('twBrand').value, made: $('twMade').value, storage: $('twStorage').value }
+    },
+    updatedAt: serverTimestamp()
+  });
+  showToast('タイヤ情報を保存しました');
+  $('tireModal').classList.remove('active');
+  await loadCars();
+});
+
+// ---------- 車両管理 ----------
+$('addCarBtn').addEventListener('click', () => {
+  $('carDocId').value = '';
+  $('carModalTitle').textContent = '車両情報を登録';
+  document.querySelectorAll('#carModal input:not([type=hidden]), #carModal select').forEach(i => i.value = '');
+  $('carModal').classList.add('active');
+});
+$('closeCarModal').addEventListener('click', () => $('carModal').classList.remove('active'));
+
+$('saveCarBtn').addEventListener('click', async () => {
+  const nickname = $('cNickname').value.trim();
+  if (!nickname) return alert('ニックネームは必須です');
+  const data = {
+    nickname, maker: $('cMaker').value, model: $('cModel').value,
+    carType: $('cCarType').value, year: $('cYear').value,
+    plate: $('cPlate').value, vin: $('cVin').value,
+    fuelType: $('cFuelType').value, driveType: $('cDriveType').value,
+    odo: Number($('cOdo').value)||0, shaken: $('cShaken').value,
+    specs: {
+      tireSize: $('cSpecTire').value, tirePressure: $('cSpecAir').value,
+      oilViscosity: $('cSpecOil').value, batteryModel: $('cSpecBattery').value, wiperSize: $('cSpecWiper').value
+    },
+    updatedAt: serverTimestamp()
+  };
+  const docId = $('carDocId').value;
+  if (docId) {
+    await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), data);
+  } else {
     const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
-    const list = $('carList');
-    list.innerHTML = '';
-    $('globalCarSelect').innerHTML = '';
-    $('addCarBtn').disabled = snap.size >= 5;
-    $('addCarBtn').classList.toggle('opacity-40', snap.size >= 5);
-
-    snap.forEach(d => {
-      const c = d.data();
-      const opt = document.createElement('option');
-      opt.value = d.id; opt.textContent = c.nickname;
-      $('globalCarSelect').appendChild(opt);
-
-      const shakenDays = daysUntil(c.shaken);
-      const jibaiDays = daysUntil(c.jibai);
-      const insDays = daysUntil(c.insExpiry);
-      const div = document.createElement('div');
-      div.className = 'bg-white p-4 rounded-xl shadow-sm text-sm space-y-1';
-      div.innerHTML = `
-        <h3 class="font-bold text-lg text-blue-700">${c.nickname}</h3>
-        <p class="text-slate-500 text-xs">${c.maker||''} ${c.model||''} ${c.year? '('+c.year+'年)':''}</p>
-        <p>走行距離: ${c.odo||0} km ／ ナンバー: ${c.plate||'-'}</p>
-        <div class="flex flex-wrap gap-1 mt-1">
-          <span class="px-2 py-0.5 rounded text-xs ${expiryColor(shakenDays)}">車検: ${c.shaken||'未設定'}${shakenDays!==null?`（残り${shakenDays}日）`:''}</span>
-          <span class="px-2 py-0.5 rounded text-xs ${expiryColor(jibaiDays)}">自賠責: ${c.jibai||'未設定'}${jibaiDays!==null?`（残り${jibaiDays}日）`:''}</span>
-          <span class="px-2 py-0.5 rounded text-xs ${expiryColor(insDays)}">任意保険: ${c.insExpiry||'未設定'}${insDays!==null?`（残り${insDays}日）`:''}</span>
-        </div>
-        ${c.insStaff? `<p class="text-xs">担当: ${c.insStaff} <a href="tel:${c.insTel}" class="text-blue-600 underline">${c.insTel||''}</a></p>`:''}
-        <div class="flex gap-2 pt-1">
-          <button class="editCarBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集</button>
-          <button class="delCarBtn text-red-500 text-xs font-bold" data-id="${d.id}">削除</button>
-        </div>`;
-      list.appendChild(div);
-    });
-
-    list.querySelectorAll('.editCarBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars`, btn.dataset.id));
-        const c = snap2.data();
-        $('carDocId').value = btn.dataset.id;
-        $('cNickname').value = c.nickname||''; $('cMaker').value=c.maker||''; $('cModel').value=c.model||'';
-        $('cYear').value=c.year||''; $('cPlate').value=c.plate||''; $('cOdo').value=c.odo||'';
-        $('cShaken').value=c.shaken||''; $('cJibai').value=c.jibai||'';
-        $('cInsCompany').value=c.insCompany||''; $('cInsStaff').value=c.insStaff||'';
-        $('cInsTel').value=c.insTel||''; $('cInsExpiry').value=c.insExpiry||'';
-        $('carModal').classList.add('active');
-      });
-    });
-    list.querySelectorAll('.delCarBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('この車両を削除しますか？（関連する給油・メンテ記録は残ります）')) return;
-        await deleteDoc(doc(db, `users/${currentUser.uid}/cars`, btn.dataset.id));
-        loadCars();
-      });
-    });
-
-    if ($('globalCarSelect').value) {
-      currentCarId = $('globalCarSelect').value;
-      loadFuel(); loadMaint();
-    }
+    if (snap.size >= 5) return alert('登録できる車両は5台までです');
+    data.createdAt = serverTimestamp();
+    await addDoc(collection(db, `users/${currentUser.uid}/cars`), data);
   }
-  $('globalCarSelect').addEventListener('change', () => {
+  showToast('車両情報を保存しました');
+  $('carModal').classList.remove('active');
+  loadCars();
+});
+
+async function loadCars() {
+  const snap = await getDocs(collection(db, `users/${currentUser.uid}/cars`));
+  const list = $('carList');
+  list.innerHTML = '';
+  $('globalCarSelect').innerHTML = '';
+  $('addCarBtn').disabled = snap.size >= 5;
+  $('addCarBtn').classList.toggle('opacity-40', snap.size >= 5);
+
+  snap.forEach(d => {
+    const c = d.data();
+    const opt = document.createElement('option');
+    opt.value = d.id; opt.textContent = c.nickname;
+    $('globalCarSelect').appendChild(opt);
+
+    const shakenDays = daysUntil(c.shaken);
+    const insExpDays = daysUntil(c.insurance?.expiry);
+    const jibaiExpDays = daysUntil(c.jibaiInsurance?.expiry);
+    const shakenBadge = expiryBadge(shakenDays);
+    const insBadge = expiryBadge(insExpDays);
+    const jibaiBadge = expiryBadge(jibaiExpDays);
+
+    const div = document.createElement('div');
+    div.className = 'bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
+    div.innerHTML = `
+      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3">
+        <h3 class="font-bold text-lg">${c.nickname}</h3>
+        <p class="text-blue-200 text-xs">${c.maker||''} ${c.model||''} ${c.year?'('+c.year+')':''}</p>
+      </div>
+      <div class="p-4 space-y-2">
+        <div class="flex justify-between items-center text-sm">
+          <span class="text-slate-500">走行距離</span>
+          <span class="font-bold text-blue-700">${(c.odo||0).toLocaleString()} km</span>
+        </div>
+        <div class="flex flex-wrap gap-1">
+          <span class="text-xs px-2 py-0.5 rounded-full ${shakenBadge.cls}">車検 ${shakenBadge.label}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${insBadge.cls}">任意保険 ${insBadge.label}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full ${jibaiBadge.cls}">自賠責 ${jibaiBadge.label}</span>
+        </div>
+        <div class="flex justify-between items-center pt-1">
+          <span class="text-xs text-slate-400">${c.plate||'ナンバー未登録'}</span>
+          <span class="text-blue-600 text-xs font-bold">詳細を見る →</span>
+        </div>
+      </div>`;
+    div.addEventListener('click', () => openDetailModal(d.id, c));
+    list.appendChild(div);
+  });
+
+  if ($('globalCarSelect').value) {
     currentCarId = $('globalCarSelect').value;
     loadFuel(); loadMaint();
-  });
+  }
+}
+$('globalCarSelect').addEventListener('change', () => {
+  currentCarId = $('globalCarSelect').value;
+  loadFuel(); loadMaint();
+});
 
-  // ---------- レシートOCR：画像 → テキスト抽出（画像は保存しない） ----------
-  async function scanReceipt(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = async () => {
-          try {
-            const canvas = document.createElement('canvas');
-            const scale = Math.min(1200 / img.width, 1);
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-            const { data: { text } } = await Tesseract.recognize(dataUrl, 'jpn+eng');
-            resolve(text);
-          } catch (err) { reject(err); }
-        };
-        img.onerror = reject;
-        img.src = e.target.result;
+// ---------- レシートOCR ----------
+async function scanReceipt(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = async () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const scale = Math.min(1200 / img.width, 1);
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          const { data: { text } } = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 0.85), 'jpn+eng');
+          resolve(text);
+        } catch(err) { reject(err); }
       };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
-  function parseReceiptText(text) {
-    console.log('OCRで読み取ったテキスト:\n', text);
-    const result = {};
-    const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
-    if (dateMatch) result.date = `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
-    const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
-    if (litersMatch) result.liters = parseFloat(litersMatch[1]);
-    let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
-    if (!amountMatch) amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
-    if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g, ''), 10);
-    return result;
-  }
-
-  $('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
-
-  $('fReceiptScan').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const statusEl = $('scanStatus');
-    statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
-    statusEl.classList.remove('hidden');
-    $('scanReceiptBtn').disabled = true;
-    $('scanReceiptBtn').classList.add('opacity-50');
-    try {
-      const text = await scanReceipt(file);
-      const parsed = parseReceiptText(text);
-      if (parsed.date) $('fDate').value = parsed.date;
-      if (parsed.liters) $('fLiters').value = parsed.liters;
-      if (parsed.amount) $('fPrice').value = parsed.amount;
-      statusEl.textContent = (parsed.date || parsed.liters || parsed.amount)
-        ? '✅ 読み取り完了。内容を確認・修正してから記録追加してください'
-        : '⚠️ うまく読み取れませんでした。手動で入力してください';
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
-    } finally {
-      $('scanReceiptBtn').disabled = false;
-      $('scanReceiptBtn').classList.remove('opacity-50');
-      e.target.value = '';
-    }
-  });
-
-  // ---------- 給油記録（画像は保存しない・数値のみ） ----------
-  $('saveFuelBtn').addEventListener('click', async () => {
-    if (!currentCarId) return alert('先に車両を選択してください');
-    const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value);
-    if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
-
-    const prevSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer', 'desc')));
-    let efficiency = null;
-    if (!prevSnap.empty) {
-      const prevOdo = prevSnap.docs[0].data().odometer;
-      if (odo > prevOdo) efficiency = Math.round(((odo - prevOdo) / liters) * 10) / 10;
-    }
-
-    await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
-      date, odometer: odo, liters, amount: price, fullTank: $('fFull').checked,
-      efficiency, createdAt: serverTimestamp()
-    });
-    await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
-
-    $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
-    $('scanStatus').classList.add('hidden');
-    loadFuel(); loadCars();
-  });
-
-  async function loadFuel() {
-    if (!currentCarId) return;
-    const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('date', 'desc')));
-    const list = $('fuelList'); list.innerHTML = '';
-    if (snap.empty) {
-      list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>';
-      return;
-    }
-    snap.forEach(d => {
-      const f = d.data();
-      const div = document.createElement('div');
-      div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm flex justify-between items-center';
-      div.innerHTML = `
-        <div><p class="font-bold">${f.date}</p>
-        <p class="text-xs text-slate-500">ODO:${f.odometer}km ／ ${f.liters}L ／ ¥${f.amount}${f.efficiency?` ／ 燃費${f.efficiency}km/L`:''}${f.fullTank?' ／ 満タン':''}</p></div>
-        <button class="delFuelBtn text-red-500 text-lg leading-none" data-id="${d.id}">×</button>`;
-      list.appendChild(div);
-    });
-    list.querySelectorAll('.delFuelBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('削除しますか？')) return;
-        await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
-        loadFuel();
-      });
-    });
-  }
-
-  // ---------- メンテナンス（予約ステータス管理） ----------
-  $('addMaintBtn').addEventListener('click', () => {
-    if (!currentCarId) return alert('先に車両を選択してください');
-    $('maintDocId').value = '';
-    document.querySelectorAll('#maintModal input:not([type=hidden]), #maintModal select').forEach(i => i.value = '');
-    $('maintModal').classList.add('active');
-  });
-  $('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
-
-  async function saveMaint(status) {
-    if (!currentCarId) return alert('先に車両を選択してください');
-    const data = {
-      status,
-      category: $('mCategory').value, shopId: $('mShop').value, staffName: $('mStaff').value,
-      reservationDate: $('mResDate').value, reservationTime: $('mResTime').value, memo: $('mMemo').value,
-      completedDate: $('mDoneDate').value, completedOdo: Number($('mDoneOdo').value)||null,
-      actualCost: Number($('mCost').value)||null, workDetail: $('mWork').value, nextScheduleDate: $('mNext').value,
-      updatedAt: serverTimestamp()
+      img.onerror = reject;
+      img.src = e.target.result;
     };
-    const docId = $('maintDocId').value;
-    const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
-    if (docId) {
-      await updateDoc(doc(colRef, docId), data);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+function parseReceiptText(text) {
+  const result = {};
+  const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
+  if (dateMatch) result.date = `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
+  const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
+  if (litersMatch) result.liters = parseFloat(litersMatch[1]);
+  let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
+  if (!amountMatch) amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
+  if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g,''), 10);
+  return result;
+}
+$('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
+$('fReceiptScan').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const statusEl = $('scanStatus');
+  statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
+  statusEl.classList.remove('hidden');
+  $('scanReceiptBtn').disabled = true;
+  try {
+    const text = await scanReceipt(file);
+    const parsed = parseReceiptText(text);
+    if (parsed.date) $('fDate').value = parsed.date;
+    if (parsed.liters) $('fLiters').value = parsed.liters;
+    if (parsed.amount) $('fPrice').value = parsed.amount;
+    statusEl.textContent = (parsed.date||parsed.liters||parsed.amount)
+      ? '✅ 読み取り完了。内容を確認・修正してから記録追加してください'
+      : '⚠️ うまく読み取れませんでした。手動で入力してください';
+  } catch(err) {
+    statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
+  } finally {
+    $('scanReceiptBtn').disabled = false;
+    e.target.value = '';
+  }
+});
+
+// ---------- 給油記録 ----------
+$('saveFuelBtn').addEventListener('click', async () => {
+  if (!currentCarId) return alert('先に車両を選択してください');
+  const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value);
+  if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
+  const prevSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer','desc')));
+  let efficiency = null;
+  if (!prevSnap.empty) {
+    const prevOdo = prevSnap.docs[0].data().odometer;
+    if (odo > prevOdo) efficiency = Math.round(((odo - prevOdo) / liters) * 10) / 10;
+  }
+  await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
+    date, odometer: odo, liters, amount: price, fullTank: $('fFull').checked, efficiency, createdAt: serverTimestamp()
+  });
+  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
+  $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
+  $('scanStatus').classList.add('hidden');
+  showToast('給油記録を追加しました');
+  loadFuel(); loadCars();
+});
+
+async function loadFuel() {
+  if (!currentCarId) return;
+  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('date','desc')));
+  const list = $('fuelList'); list.innerHTML = '';
+  if (snap.empty) { list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>'; return; }
+  snap.forEach(d => {
+    const f = d.data();
+    const div = document.createElement('div');
+    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm flex justify-between items-center';
+    div.innerHTML = `
+      <div><p class="font-bold">${f.date}</p>
+      <p class="text-xs text-slate-500">ODO:${f.odometer}km ／ ${f.liters}L ／ ¥${f.amount}${f.efficiency?` ／ 燃費${f.efficiency}km/L`:''}${f.fullTank?' ／ 満タン':''}</p></div>
+      <button class="delFuelBtn text-red-400 text-xl leading-none" data-id="${d.id}">×</button>`;
+    list.appendChild(div);
+  });
+  list.querySelectorAll('.delFuelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
+      loadFuel();
+    });
+  });
+}
+
+// ---------- カテゴリ管理 ----------
+async function loadCategories() {
+  const colRef = collection(db, `users/${currentUser.uid}/categories`);
+  let snap = await getDocs(query(colRef, orderBy('createdAt')));
+  if (snap.empty) {
+    const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換",
+      "エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
+    for (const name of defaults) await addDoc(colRef, { name, createdAt: serverTimestamp() });
+    snap = await getDocs(query(colRef, orderBy('createdAt')));
+  }
+  const listEl = $('categoryList'); const selectEl = $('mCategory');
+  listEl.innerHTML = ''; selectEl.innerHTML = '';
+  snap.forEach(d => {
+    const data = d.data();
+    const li = document.createElement('li');
+    li.className = 'flex items-center gap-2 py-1.5';
+    li.innerHTML = `<input type="text" value="${data.name}" data-id="${d.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
+      <button class="catDelBtn text-red-500 text-xs font-bold px-2" data-id="${d.id}">削除</button>`;
+    listEl.appendChild(li);
+    const opt = document.createElement('option');
+    opt.value = data.name; opt.textContent = data.name;
+    selectEl.appendChild(opt);
+  });
+  listEl.querySelectorAll('.catEditInput').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      if (!inp.value.trim()) return;
+      await updateDoc(doc(db, `users/${currentUser.uid}/categories`, inp.dataset.id), { name: inp.value.trim() });
+      loadCategories();
+    });
+  });
+  listEl.querySelectorAll('.catDelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/categories`, btn.dataset.id));
+      loadCategories();
+    });
+  });
+}
+$('addCategoryBtn').addEventListener('click', async () => {
+  const name = $('newCategoryName').value.trim();
+  if (!name) return;
+  await addDoc(collection(db, `users/${currentUser.uid}/categories`), { name, createdAt: serverTimestamp() });
+  $('newCategoryName').value = '';
+  loadCategories();
+});
+
+// ---------- 店舗マスタ ----------
+async function loadShops() {
+  const colRef = collection(db, `users/${currentUser.uid}/shops`);
+  const snap = await getDocs(query(colRef, orderBy('createdAt')));
+  const listEl = $('shopList'); const selectEl = $('mShop');
+  listEl.innerHTML = ''; selectEl.innerHTML = '<option value="">店舗を選択</option>';
+  snap.forEach(d => {
+    const data = d.data();
+    const li = document.createElement('li');
+    li.className = 'flex justify-between items-center py-1.5 text-sm';
+    li.innerHTML = `<span>${data.name}（${data.tel||'-'}）</span>
+      <button class="shopDelBtn text-red-500 text-xs font-bold" data-id="${d.id}">削除</button>`;
+    listEl.appendChild(li);
+    const opt = document.createElement('option');
+    opt.value = d.id; opt.textContent = data.name;
+    selectEl.appendChild(opt);
+  });
+  listEl.querySelectorAll('.shopDelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/shops`, btn.dataset.id));
+      loadShops();
+    });
+  });
+}
+$('addShopBtn').addEventListener('click', async () => {
+  const name = $('newShopName').value.trim();
+  if (!name) return;
+  await addDoc(collection(db, `users/${currentUser.uid}/shops`), { name, tel: $('newShopTel').value.trim(), createdAt: serverTimestamp() });
+  $('newShopName').value = ''; $('newShopTel').value = '';
+  loadShops();
+});
+
+// ---------- メンテナンス ----------
+$('addMaintBtn').addEventListener('click', () => {
+  if (!currentCarId) return alert('先に車両を選択してください');
+  $('maintDocId').value = '';
+  document.querySelectorAll('#maintModal input:not([type=hidden]), #maintModal select').forEach(i => i.value = '');
+  $('maintModal').classList.add('active');
+});
+$('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
+
+async function saveMaint(status) {
+  if (!currentCarId) return alert('先に車両を選択してください');
+  const data = {
+    status, category: $('mCategory').value, shopId: $('mShop').value, staffName: $('mStaff').value,
+    reservationDate: $('mResDate').value, reservationTime: $('mResTime').value, memo: $('mMemo').value,
+    completedDate: $('mDoneDate').value, completedOdo: Number($('mDoneOdo').value)||null,
+    actualCost: Number($('mCost').value)||null, workDetail: $('mWork').value, nextScheduleDate: $('mNext').value,
+    updatedAt: serverTimestamp()
+  };
+  const docId = $('maintDocId').value;
+  const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
+  if (docId) { await updateDoc(doc(colRef, docId), data); }
+  else { data.createdAt = serverTimestamp(); await addDoc(colRef, data); }
+  showToast(status === '完了' ? '完了記録を保存しました' : '予約を保存しました');
+  $('maintModal').classList.remove('active');
+  loadMaint();
+}
+$('saveMaintReserveBtn').addEventListener('click', () => saveMaint('予約済み'));
+$('saveMaintDoneBtn').addEventListener('click', () => saveMaint('完了'));
+
+async function loadMaint() {
+  if (!currentCarId) return;
+  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`), orderBy('createdAt','desc')));
+  const activeList = $('maintListActive'), doneList = $('maintListDone');
+  activeList.innerHTML = ''; doneList.innerHTML = '';
+  let ac = 0, dc = 0;
+  snap.forEach(d => {
+    const m = d.data();
+    const div = document.createElement('div');
+    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+    if (m.status === '完了') {
+      dc++;
+      div.innerHTML = `
+        <p class="font-bold text-green-700">✅ ${m.category}</p>
+        <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0} ／ ${m.workDetail||''}</p>
+        ${m.nextScheduleDate?`<p class="text-xs text-blue-600">次回予定: ${m.nextScheduleDate}</p>`:''}
+        <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>`;
+      doneList.appendChild(div);
     } else {
-      data.createdAt = serverTimestamp();
-      await addDoc(colRef, data);
+      ac++;
+      const days = daysUntil(m.reservationDate);
+      div.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div><p class="font-bold">${m.category}</p>
+          <p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div>
+          <span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span>
+        </div>
+        <div class="flex gap-2 pt-1">
+          <button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button>
+          <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
+        </div>`;
+      activeList.appendChild(div);
     }
-    $('maintModal').classList.remove('active');
-    loadMaint();
-  }
-  $('saveMaintReserveBtn').addEventListener('click', () => saveMaint('予約済み'));
-  $('saveMaintDoneBtn').addEventListener('click', () => saveMaint('完了'));
+  });
+  if (ac === 0) activeList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
+  if (dc === 0) doneList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
 
-  async function loadMaint() {
-    if (!currentCarId) return;
-    const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`), orderBy('createdAt', 'desc')));
-    const activeList = $('maintListActive'), doneList = $('maintListDone');
-    activeList.innerHTML = ''; doneList.innerHTML = '';
-    let activeCount = 0, doneCount = 0;
-    snap.forEach(d => {
-      const m = d.data();
-      const div = document.createElement('div');
-      div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-      if (m.status === '完了') {
-        doneCount++;
-        div.innerHTML = `
-          <p class="font-bold text-green-700">✅ ${m.category}</p>
-          <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${m.actualCost||0} ／ ${m.workDetail||''}</p>
-          ${m.nextScheduleDate?`<p class="text-xs text-blue-600">次回予定: ${m.nextScheduleDate}</p>`:''}
-          <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>`;
-        doneList.appendChild(div);
-      } else {
-        activeCount++;
-        const days = daysUntil(m.reservationDate);
-        div.innerHTML = `
-          <div class="flex justify-between items-start">
-            <div>
-              <p class="font-bold">${m.category}</p>
-              <p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p>
-            </div>
-            <span class="px-2 py-0.5 rounded text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span>
-          </div>
-          <div class="flex gap-2 pt-1">
-            <button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button>
-            <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
-          </div>`;
-        activeList.appendChild(div);
-      }
+  document.querySelectorAll('.editMaintBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
+      const m = snap2.data();
+      $('maintDocId').value = btn.dataset.id;
+      $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
+      $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
+      $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
+      $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||''; $('mNext').value=m.nextScheduleDate||'';
+      $('maintModal').classList.add('active');
     });
-    if (activeCount === 0) activeList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
-    if (doneCount === 0) doneList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
-
-    document.querySelectorAll('.editMaintBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
-        const m = snap2.data();
-        $('maintDocId').value = btn.dataset.id;
-        $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
-        $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
-        $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
-        $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||''; $('mNext').value=m.nextScheduleDate||'';
-        $('maintModal').classList.add('active');
-      });
+  });
+  document.querySelectorAll('.delMaintBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
+      loadMaint();
     });
-    document.querySelectorAll('.delMaintBtn').forEach(btn => {
-      btn.addEventListener('click', async () => {
-        if (!confirm('削除しますか？')) return;
-        await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
-        loadMaint();
-      });
-    });
-  }
+  });
+}
 </script>
 </body>
 </html>
