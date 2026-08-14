@@ -8,6 +8,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- CHANGELOGのMarkdownを綺麗なHTMLに変換するためのライブラリ -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <style>
   body { font-family: 'Noto Sans JP', sans-serif; }
   .tab-content { display: none; }
@@ -19,6 +21,12 @@
   .modal.active { display: flex; }
   .fade-in { animation: fadeIn .2s ease-out; }
   @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  .markdown-body h1 { font-size: 1.4rem; font-weight: bold; margin-bottom: 1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+  .markdown-body h2 { font-size: 1.15rem; font-weight: bold; margin-top: 1.25rem; margin-bottom: 0.6rem; color: #1e40af; }
+  .markdown-body h3 { font-size: 1rem; font-weight: bold; margin-top: 0.9rem; margin-bottom: 0.4rem; }
+  .markdown-body ul { list-style-type: disc; padding-left: 1.4rem; margin-bottom: 0.8rem; }
+  .markdown-body li { margin-bottom: 0.3rem; }
+  .markdown-body p { margin-bottom: 0.8rem; line-height: 1.6; }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen pb-24">
@@ -125,11 +133,25 @@
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-1 text-slate-700">📋 バージョン情報</h3>
       <p id="versionInfoText" class="text-xs text-slate-500 mb-2"></p>
-      <a id="changelogLink" target="_blank" class="block text-center text-blue-600 border border-blue-300 py-2 rounded-lg text-sm font-bold">CHANGELOG.md を確認する →</a>
-　　　　<a id="commitsLink" target="_blank" class="block text-center text-slate-500 text-xs mt-2 underline">GitHubの詳細なコミット履歴を見る →</a>
+      <button id="openChangelogBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-2 rounded-lg text-sm font-bold transition">📝 変更履歴（CHANGELOG）を確認する</button>
     </div>
   </section>
 </main>
+
+<!-- CHANGELOG表示モーダル（GitHub画面を開かず、アプリ内だけで完結） -->
+<div id="changelogModal" class="modal fixed inset-0 z-50 bg-black/60 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
+    <div class="bg-slate-800 text-white px-5 py-4 flex justify-between items-center flex-shrink-0">
+      <h2 class="font-bold text-lg">📝 変更履歴</h2>
+      <button id="closeChangelogModal" class="text-white text-3xl leading-none opacity-70 hover:opacity-100">&times;</button>
+    </div>
+    <div class="overflow-y-auto flex-1 p-5">
+      <div id="changelogContent" class="markdown-body text-sm text-slate-700">
+        <p class="text-center text-slate-400 py-4">読み込み中...</p>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- 車両詳細モーダル -->
 <div id="carDetailModal" class="modal fixed inset-0 z-50 bg-black/60 items-end sm:items-center justify-center">
@@ -448,20 +470,6 @@ let currentDetailCarData = null;
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
-// 現在アクセスしているURLから、正しいGitHubリンクを自動計算する。
-// ブランチ名は "HEAD" を指定することで main/master どちらでも自動対応させ、
-// 「username.github.io」という特殊な名前のリポジトリ（ユーザーページ）で
-// 直下にサイトが公開されているケースにも対応できるようにしている。
-const hostname = window.location.hostname;
-if (hostname.endsWith('.github.io')) {
-  const username = hostname.split('.')[0];
-  // "index.html" のようなファイル名が混ざらないよう、"." を含む部分は除外する
-  const pathParts = window.location.pathname.split('/').filter(p => p && !p.includes('.'));
-  const repo = pathParts.length > 0 ? pathParts[0] : `${username}.github.io`;
-  const repoUrl = `https://github.com/${username}/${repo}`;
-  $('changelogLink').href = `${repoUrl}/blob/HEAD/CHANGELOG.md`;
-  $('commitsLink').href = `${repoUrl}/commits/HEAD`;
-}
 $('versionInfoText') && ($('versionInfoText').textContent = `現在のバージョン: v${APP_VERSION}`);
 
 function daysUntil(dateStr) {
@@ -535,6 +543,37 @@ onAuthStateChanged(auth, async user => {
     $('unauthScreen').classList.remove('hidden'); $('authScreen').classList.add('hidden');
   }
 });
+
+// ---------- CHANGELOG表示（GitHubの画面は開かず、アプリ内モーダルに整形表示） ----------
+$('openChangelogBtn').addEventListener('click', async () => {
+  const contentEl = $('changelogContent');
+  contentEl.innerHTML = '<p class="text-center text-slate-400 py-4">読み込み中...</p>';
+  $('changelogModal').classList.add('active');
+
+  try {
+    const hostname = window.location.hostname;
+    let rawUrl = '';
+    if (hostname.endsWith('.github.io')) {
+      const username = hostname.split('.')[0];
+      const pathParts = window.location.pathname.split('/').filter(p => p && !p.includes('.'));
+      const repo = pathParts.length > 0 ? pathParts[0] : `${username}.github.io`;
+      // ブランチ名は基本的に "main" を指定する。
+      // もしリポジトリのデフォルトブランチが "master" の場合は、
+      // 下記の 'main' の部分を 'master' に書き換えてください。
+      rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/CHANGELOG.md`;
+    } else {
+      rawUrl = './CHANGELOG.md';
+    }
+    const res = await fetch(rawUrl + '?t=' + new Date().getTime());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    contentEl.innerHTML = marked.parse(text);
+  } catch (err) {
+    console.error(err);
+    contentEl.innerHTML = '<p class="text-center text-red-500 py-4">変更履歴の読み込みに失敗しました。<br>ブランチ名（main/master）が正しいかご確認ください。</p>';
+  }
+});
+$('closeChangelogModal').addEventListener('click', () => $('changelogModal').classList.remove('active'));
 
 // ---------- タブ切り替え ----------
 document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -884,7 +923,7 @@ $('fReceiptScan').addEventListener('change', async e => {
   finally { $('scanReceiptBtn').disabled = false; e.target.value = ''; }
 });
 
-// ---------- 給油記録（満タン法による燃費計算＋サマリー） ----------
+// ---------- 給油記録 ----------
 $('saveFuelBtn').addEventListener('click', async () => {
   if (!currentCarId) return alert('先に車両を選択してください');
   const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value);
@@ -894,7 +933,6 @@ $('saveFuelBtn').addEventListener('click', async () => {
   let efficiency = null;
   if (!prevSnap.empty) {
     const prev = prevSnap.docs[0].data();
-    // 満タン法：前回・今回とも満タン給油の場合のみ正確な燃費として算出する
     if (isFull && prev.fullTank && odo > prev.odometer) {
       efficiency = Math.round(((odo - prev.odometer) / liters) * 10) / 10;
     }
