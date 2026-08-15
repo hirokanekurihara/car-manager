@@ -50,6 +50,7 @@
   .sort-btn:hover { background:#e2e8f0; }
   .sort-btn:disabled { opacity:.3; cursor:default; }
   .modal-scroll { -webkit-overflow-scrolling: touch; overflow-y: auto; }
+  .month-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
@@ -74,9 +75,7 @@
 </div>
 
 <main id="authScreen" class="max-w-5xl mx-auto px-3 sm:px-4 py-4 hidden space-y-4">
-
   <nav id="mainTabNav" class="bg-white rounded-xl shadow-sm p-1.5 flex gap-1 text-xs sm:text-sm font-semibold"></nav>
-
   <div class="bg-white p-3 rounded-xl shadow-sm flex items-center gap-2">
     <label class="text-sm font-bold text-slate-600 whitespace-nowrap">対象車両</label>
     <select id="globalCarSelect" class="flex-1 border border-slate-300 p-2 rounded-lg text-sm"></select>
@@ -112,7 +111,6 @@
         <label class="flex items-center gap-2 border border-slate-300 p-2 rounded-lg bg-slate-50 text-xs cursor-pointer col-span-2">
           <input type="checkbox" id="fFull" checked class="w-4 h-4"> 満タン給油
         </label>
-        <!-- 給油店舗はメンテ店舗マスタとは独立した専用マスタから選択、または自由入力 -->
         <div class="col-span-2 space-y-1">
           <label class="text-xs text-slate-500">給油した店舗（任意）</label>
           <select id="fShopSelect" class="border border-slate-300 p-2 rounded-lg w-full text-sm mb-1">
@@ -150,7 +148,7 @@
     </div>
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🔧 作業カテゴリの管理</h3>
-      <p class="text-xs text-slate-400 -mt-2 mb-3">※「車検整備」「定期点検」選択時のみ、メンテ完了画面にチェックリストが表示されます</p>
+      <p class="text-xs text-slate-400 -mt-2 mb-3">※「車検整備」「定期点検」選択時のみ完了画面にチェックリストが表示されます</p>
       <div class="flex gap-2 mb-3">
         <input type="text" id="newCategoryName" placeholder="新しいカテゴリ名" class="border border-slate-300 p-2 rounded-lg flex-1 text-sm">
         <button id="addCategoryBtn" class="bg-blue-600 text-white px-4 rounded-lg font-bold text-sm">追加</button>
@@ -159,7 +157,7 @@
     </div>
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🏪 店舗マスタの管理</h3>
-      <p class="text-xs text-slate-400 -mt-2 mb-3">※メンテナンス予約・チケット購入店舗で使用します（給油店舗は下の専用マスタで管理）</p>
+      <p class="text-xs text-slate-400 -mt-2 mb-3">※メンテナンス予約・チケット購入店舗で使用（給油店舗は下の専用マスタで管理）</p>
       <div class="grid grid-cols-2 gap-2 mb-3">
         <input type="text" id="newShopName" placeholder="店舗名" class="border border-slate-300 p-2 rounded-lg text-sm">
         <input type="tel" id="newShopTel" placeholder="電話番号" class="border border-slate-300 p-2 rounded-lg text-sm">
@@ -167,7 +165,6 @@
       </div>
       <ul id="shopList" class="text-sm divide-y divide-slate-100"></ul>
     </div>
-    <!-- 給油専用の店舗マスタ。メンテ店舗マスタとは完全に独立管理 -->
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">⛽ 給油店舗マスタの管理</h3>
       <p class="text-xs text-slate-400 -mt-2 mb-3">※給油記録専用です。上記のメンテ店舗マスタとは独立しています</p>
@@ -192,9 +189,7 @@
       <button id="closeChangelogModal" class="text-white text-3xl leading-none opacity-70 hover:opacity-100">&times;</button>
     </div>
     <div class="modal-scroll flex-1 p-5">
-      <div id="changelogContent" class="markdown-body text-sm text-slate-700">
-        <p class="text-center text-slate-400 py-4">読み込み中...</p>
-      </div>
+      <div id="changelogContent" class="markdown-body text-sm text-slate-700"><p class="text-center text-slate-400 py-4">読み込み中...</p></div>
     </div>
   </div>
 </div>
@@ -209,20 +204,18 @@
       <button id="closeDetailModal" class="text-white text-3xl leading-none opacity-70 hover:opacity-100">&times;</button>
     </div>
     <div class="bg-blue-800 px-2 py-2 flex gap-1 text-xs font-semibold flex-shrink-0 overflow-x-auto">
-      <button class="detail-tab-btn active flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-basic">📋 基本</button>
-      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-insurance">🛡️ 保険</button>
-      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-tire">🔵 タイヤ</button>
-      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-ticket">🎫 チケット</button>
-      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-2" data-dtarget="dtab-analysis">📊 分析</button>
+      <button class="detail-tab-btn active flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-basic">📋 基本</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-insurance">🛡️ 保険</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-tire">🔵 タイヤ</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-ticket">🎫 チケット</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-plan">📅 計画</button>
+      <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-analysis">📊 分析</button>
     </div>
     <div class="modal-scroll flex-1 p-4 space-y-3">
 
       <div id="dtab-basic" class="detail-tab-content space-y-3">
         <div class="grid grid-cols-2 gap-3 text-sm">
-          <div class="bg-slate-50 p-3 rounded-xl col-span-2">
-            <p class="text-xs text-slate-400 mb-1">走行距離</p>
-            <p id="d-odo" class="text-2xl font-black text-blue-700">- km</p>
-          </div>
+          <div class="bg-slate-50 p-3 rounded-xl col-span-2"><p class="text-xs text-slate-400 mb-1">走行距離</p><p id="d-odo" class="text-2xl font-black text-blue-700">- km</p></div>
           <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">メーカー</p><p id="d-maker" class="font-bold">-</p></div>
           <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">車種</p><p id="d-model" class="font-bold">-</p></div>
           <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">型式</p><p id="d-type" class="font-bold">-</p></div>
@@ -231,11 +224,7 @@
           <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">車台番号</p><p id="d-vin" class="font-bold text-xs">-</p></div>
           <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">燃料種別</p><p id="d-fuel" class="font-bold">-</p></div>
           <div class="bg-slate-50 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">駆動方式</p><p id="d-drive" class="font-bold">-</p></div>
-          <div id="d-shaken-card" class="col-span-2 p-3 rounded-xl">
-            <p class="text-xs text-slate-400 mb-1">🔍 車検満了日</p>
-            <p id="d-shaken" class="font-bold text-lg">-</p>
-            <p id="d-shaken-days" class="text-xs mt-0.5"></p>
-          </div>
+          <div id="d-shaken-card" class="col-span-2 p-3 rounded-xl"><p class="text-xs text-slate-400 mb-1">🔍 車検満了日</p><p id="d-shaken" class="font-bold text-lg">-</p><p id="d-shaken-days" class="text-xs mt-0.5"></p></div>
         </div>
         <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl">
           <p class="font-bold text-indigo-700 text-sm mb-2">🔩 メンテナンススペック</p>
@@ -252,17 +241,13 @@
 
       <div id="dtab-insurance" class="detail-tab-content hidden space-y-3">
         <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-4 rounded-2xl shadow-lg">
-          <div class="flex justify-between items-start mb-3">
-            <div><p class="text-blue-200 text-xs">任意保険</p><p id="ins-company" class="font-bold text-lg">-</p></div>
-            <span class="text-2xl">🛡️</span>
-          </div>
+          <div class="flex justify-between items-start mb-3"><div><p class="text-blue-200 text-xs">任意保険</p><p id="ins-company" class="font-bold text-lg">-</p></div><span class="text-2xl">🛡️</span></div>
           <div class="grid grid-cols-2 gap-2 text-sm mb-3">
             <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">証券番号</p><p id="ins-policy" class="font-bold text-xs">-</p></div>
             <div id="ins-expiry-card" class="p-2 rounded-lg"><p class="text-blue-200 text-xs">満了日</p><p id="ins-expiry" class="font-bold text-xs">-</p><p id="ins-expiry-days" class="text-xs"></p></div>
             <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">等級</p><p id="ins-grade" class="font-bold text-xs">-</p></div>
             <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">運転者/年齢条件</p><p id="ins-condition" class="font-bold text-xs">-</p></div>
           </div>
-          <!-- 3年契約保険料の表示ブロック -->
           <div class="bg-white/10 p-3 rounded-xl mb-3">
             <p class="text-blue-200 text-xs font-bold mb-2">💰 保険料（3年契約）</p>
             <div class="grid grid-cols-3 gap-2 text-center mb-2">
@@ -270,29 +255,17 @@
               <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">2年目</p><p id="ins-fee2" class="font-bold text-sm">-</p></div>
               <div class="bg-white/10 p-2 rounded-lg"><p class="text-blue-200 text-xs">3年目</p><p id="ins-fee3" class="font-bold text-sm">-</p></div>
             </div>
-            <div class="bg-white/20 p-2 rounded-lg text-center">
-              <p class="text-blue-200 text-xs">3年合計</p>
-              <p id="ins-fee-total" class="font-black text-lg">-</p>
-            </div>
+            <div class="bg-white/20 p-2 rounded-lg text-center"><p class="text-blue-200 text-xs">3年合計</p><p id="ins-fee-total" class="font-black text-lg">-</p></div>
           </div>
-          <div class="bg-white/10 p-3 rounded-xl text-xs mb-3">
-            <p class="text-blue-200 font-bold mb-1">補償内容メモ</p>
-            <p id="ins-memo" class="whitespace-pre-wrap">-</p>
-          </div>
+          <div class="bg-white/10 p-3 rounded-xl text-xs mb-3"><p class="text-blue-200 font-bold mb-1">補償内容メモ</p><p id="ins-memo" class="whitespace-pre-wrap">-</p></div>
           <div class="flex gap-2 items-center">
             <div class="flex-1"><p class="text-blue-200 text-xs">担当者</p><p id="ins-staff" class="font-bold text-sm">-</p></div>
             <a id="ins-tel-link" href="#" class="bg-green-500 hover:bg-green-400 text-white px-4 py-2 rounded-xl font-bold text-sm">📞 <span id="ins-tel-text">電話</span></a>
           </div>
-          <div class="mt-2 text-xs text-blue-200">
-            <p>代理店: <span id="ins-agency">-</span></p>
-            <a id="ins-agency-tel-link" href="#" class="text-green-300 underline"><span id="ins-agency-tel-text"></span></a>
-          </div>
+          <div class="mt-2 text-xs text-blue-200"><p>代理店: <span id="ins-agency">-</span></p><a id="ins-agency-tel-link" href="#" class="text-green-300 underline"><span id="ins-agency-tel-text"></span></a></div>
         </div>
         <div class="bg-gradient-to-br from-slate-600 to-slate-800 text-white p-4 rounded-2xl shadow-lg">
-          <div class="flex justify-between items-start mb-3">
-            <div><p class="text-slate-300 text-xs">自賠責保険</p><p id="jibai-policy-title" class="font-bold text-lg">-</p></div>
-            <span class="text-2xl">📄</span>
-          </div>
+          <div class="flex justify-between items-start mb-3"><div><p class="text-slate-300 text-xs">自賠責保険</p><p id="jibai-policy-title" class="font-bold text-lg">-</p></div><span class="text-2xl">📄</span></div>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div class="bg-white/10 p-2 rounded-lg"><p class="text-slate-300 text-xs">証券番号</p><p id="jibai-policy" class="font-bold text-xs">-</p></div>
             <div id="jibai-expiry-card" class="p-2 rounded-lg"><p class="text-slate-300 text-xs">満了日</p><p id="jibai-expiry" class="font-bold text-xs">-</p><p id="jibai-expiry-days" class="text-xs"></p></div>
@@ -303,10 +276,7 @@
 
       <div id="dtab-tire" class="detail-tab-content hidden space-y-3">
         <div class="bg-orange-50 border border-orange-200 p-4 rounded-2xl">
-          <div class="flex justify-between items-center mb-2">
-            <p class="font-bold text-orange-700">☀️ 夏タイヤ</p>
-            <span id="tire-summer-age" class="text-xs px-2 py-0.5 rounded-full"></span>
-          </div>
+          <div class="flex justify-between items-center mb-2"><p class="font-bold text-orange-700">☀️ 夏タイヤ</p><span id="tire-summer-age" class="text-xs px-2 py-0.5 rounded-full"></span></div>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div><p class="text-xs text-slate-400">サイズ</p><p id="ts-size" class="font-bold">-</p></div>
             <div><p class="text-xs text-slate-400">ブランド</p><p id="ts-brand" class="font-bold">-</p></div>
@@ -315,10 +285,7 @@
           </div>
         </div>
         <div class="bg-blue-50 border border-blue-200 p-4 rounded-2xl">
-          <div class="flex justify-between items-center mb-2">
-            <p class="font-bold text-blue-700">❄️ スタッドレス</p>
-            <span id="tire-winter-age" class="text-xs px-2 py-0.5 rounded-full"></span>
-          </div>
+          <div class="flex justify-between items-center mb-2"><p class="font-bold text-blue-700">❄️ スタッドレス</p><span id="tire-winter-age" class="text-xs px-2 py-0.5 rounded-full"></span></div>
           <div class="grid grid-cols-2 gap-2 text-sm">
             <div><p class="text-xs text-slate-400">サイズ</p><p id="tw-size" class="font-bold">-</p></div>
             <div><p class="text-xs text-slate-400">ブランド</p><p id="tw-brand" class="font-bold">-</p></div>
@@ -334,12 +301,22 @@
         <div id="ticketList" class="space-y-3"></div>
       </div>
 
+      <!-- 📅 年間計画タブ：既存の車検・保険満了日を自動合成表示＋手動計画イベント -->
+      <div id="dtab-plan" class="detail-tab-content hidden space-y-3">
+        <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-4 rounded-2xl shadow">
+          <p class="text-slate-300 text-xs mb-3">📅 年間スケジュール概要</p>
+          <div id="planMonthBar" class="grid grid-cols-12 gap-0.5 text-center text-xs mb-1"></div>
+          <div id="planMonthLabels" class="grid grid-cols-12 gap-0.5 text-center text-slate-400" style="font-size:9px"></div>
+        </div>
+        <div id="planNextCard" class="hidden"></div>
+        <button id="addPlanBtn" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-xl font-bold text-sm shadow">＋ 年間計画イベントを追加</button>
+        <p class="text-xs text-slate-400 text-center">※車検・保険の満了日は自動で反映されます（🔗マーク）</p>
+        <div id="planList" class="space-y-2"></div>
+      </div>
+
       <div id="dtab-analysis" class="detail-tab-content hidden space-y-4">
         <div id="analysisSummaryCards" class="grid grid-cols-2 gap-2 text-sm"></div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
-          <p class="font-bold text-slate-700 text-sm mb-2">📅 月別費用（直近12ヶ月）</p>
-          <canvas id="monthlyChart" height="200"></canvas>
-        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm"><p class="font-bold text-slate-700 text-sm mb-2">📅 月別費用（直近12ヶ月）</p><canvas id="monthlyChart" height="200"></canvas></div>
         <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
           <p class="font-bold text-slate-700 text-sm mb-2">🍩 年間費用の内訳</p>
           <div class="flex items-center gap-3">
@@ -347,12 +324,8 @@
             <div id="donutLegend" class="text-xs space-y-1 flex-1"></div>
           </div>
         </div>
-        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
-          <p class="font-bold text-slate-700 text-sm mb-2">📈 燃費推移（直近20件）</p>
-          <canvas id="efficiencyChart" height="180"></canvas>
-        </div>
+        <div class="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm"><p class="font-bold text-slate-700 text-sm mb-2">📈 燃費推移（直近20件）</p><canvas id="efficiencyChart" height="180"></canvas></div>
       </div>
-
     </div>
   </div>
 </div>
@@ -372,12 +345,8 @@
       <input type="text" id="cYear" placeholder="初度登録（例：令和7年3月）" class="border p-2.5 rounded-xl">
       <input type="text" id="cPlate" placeholder="ナンバー" class="border p-2.5 rounded-xl col-span-2">
       <input type="text" id="cVin" placeholder="車台番号" class="border p-2.5 rounded-xl col-span-2">
-      <select id="cFuelType" class="border p-2.5 rounded-xl">
-        <option value="">燃料種別</option><option>ガソリン</option><option>ハイブリッド</option><option>軽油</option><option>EV</option><option>PHEV</option>
-      </select>
-      <select id="cDriveType" class="border p-2.5 rounded-xl">
-        <option value="">駆動方式</option><option>FF</option><option>FR</option><option>4WD</option><option>AWD</option>
-      </select>
+      <select id="cFuelType" class="border p-2.5 rounded-xl"><option value="">燃料種別</option><option>ガソリン</option><option>ハイブリッド</option><option>軽油</option><option>EV</option><option>PHEV</option></select>
+      <select id="cDriveType" class="border p-2.5 rounded-xl"><option value="">駆動方式</option><option>FF</option><option>FR</option><option>4WD</option><option>AWD</option></select>
       <input type="number" id="cOdo" placeholder="現在の走行距離(km)" class="border p-2.5 rounded-xl col-span-2">
       <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">車検満了日</label><input type="date" id="cShaken" class="border p-2.5 rounded-xl w-full"></div>
       <div class="col-span-2 border-t pt-3 mt-1">
@@ -410,18 +379,14 @@
           <input type="text" id="iPolicy" placeholder="証券番号" class="border p-2.5 rounded-xl col-span-2">
           <input type="text" id="iGrade" placeholder="等級（例：15等級/0年）" class="border p-2.5 rounded-xl">
           <input type="text" id="iCondition" placeholder="運転者限定/年齢条件" class="border p-2.5 rounded-xl">
-          <!-- 3年契約の保険料入力欄。入力に応じて合計をリアルタイム表示する -->
           <div class="col-span-2 bg-white border border-blue-200 p-3 rounded-xl space-y-2">
             <p class="text-xs font-bold text-blue-700">💰 保険料（3年契約）</p>
             <div class="grid grid-cols-3 gap-2">
-              <div><label class="text-xs text-slate-500 block mb-1">1年目（円）</label><input type="number" id="iAnnualFee1" placeholder="例：85000" class="border p-2 rounded-lg w-full text-sm"></div>
-              <div><label class="text-xs text-slate-500 block mb-1">2年目（円）</label><input type="number" id="iAnnualFee2" placeholder="例：82000" class="border p-2 rounded-lg w-full text-sm"></div>
-              <div><label class="text-xs text-slate-500 block mb-1">3年目（円）</label><input type="number" id="iAnnualFee3" placeholder="例：80000" class="border p-2 rounded-lg w-full text-sm"></div>
+              <div><label class="text-xs text-slate-500 block mb-1">1年目（円）</label><input type="number" id="iAnnualFee1" class="border p-2 rounded-lg w-full text-sm"></div>
+              <div><label class="text-xs text-slate-500 block mb-1">2年目（円）</label><input type="number" id="iAnnualFee2" class="border p-2 rounded-lg w-full text-sm"></div>
+              <div><label class="text-xs text-slate-500 block mb-1">3年目（円）</label><input type="number" id="iAnnualFee3" class="border p-2 rounded-lg w-full text-sm"></div>
             </div>
-            <div class="bg-blue-50 p-2 rounded-lg text-center">
-              <p class="text-xs text-slate-400">3年合計（自動計算）</p>
-              <p id="iFeeTotalDisplay" class="font-black text-blue-700 text-base">- 円</p>
-            </div>
+            <div class="bg-blue-50 p-2 rounded-lg text-center"><p class="text-xs text-slate-400">3年合計（自動計算）</p><p id="iFeeTotalDisplay" class="font-black text-blue-700 text-base">- 円</p></div>
           </div>
           <input type="text" id="iStaff" placeholder="担当者名" class="border p-2.5 rounded-xl">
           <input type="tel" id="iTel" placeholder="担当者電話番号" class="border p-2.5 rounded-xl">
@@ -523,7 +488,6 @@
           <input type="text" id="mWork" placeholder="作業内容（自由記入）" class="border p-2.5 rounded-xl">
           <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">次回予定日</label><input type="date" id="mNext" class="border p-2.5 rounded-xl w-full"></div>
         </div>
-        <!-- 車検整備・定期点検カテゴリ選択時のみ表示するチェックリストブロック -->
         <div id="workChecklistBlock" class="bg-green-50 border border-green-100 p-3 rounded-xl hidden">
           <p class="text-xs font-bold text-green-700 mb-2">✅ 実施した作業（複数選択可）</p>
           <div id="workChecklist" class="grid grid-cols-2 gap-1"></div>
@@ -534,6 +498,49 @@
         <button id="saveMaintReserveBtn" class="flex-1 bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-sm">予約として保存</button>
         <button id="saveMaintDoneBtn" class="flex-1 bg-green-600 text-white py-2.5 rounded-xl font-bold text-sm">✅ 完了にする</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<div id="planModal" class="modal fixed inset-0 z-40 bg-black/50 items-end sm:items-center justify-center">
+  <div class="fade-in bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scroll">
+    <div class="sticky top-0 bg-white px-5 py-4 border-b flex justify-between items-center">
+      <h2 id="planModalTitle" class="font-bold text-lg">📅 計画イベントを追加</h2>
+      <button id="closePlanModal" class="text-2xl text-slate-400">&times;</button>
+    </div>
+    <div class="p-5 space-y-3 text-sm">
+      <input type="hidden" id="planDocId">
+      <input type="hidden" id="planCarDocId">
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">イベント種別</label>
+        <select id="pType" class="border p-2.5 rounded-xl w-full">
+          <option value="🔧 ボディメンテナンス">🔧 ボディメンテナンス</option>
+          <option value="🔍 6ヶ月点検">🔍 6ヶ月点検</option>
+          <option value="🔵 タイヤ交換">🔵 タイヤ交換</option>
+          <option value="🌙 ラストムーンメンテナンス">🌙 ラストムーンメンテナンス</option>
+          <option value="🚿 洗車・コーティング">🚿 洗車・コーティング</option>
+          <option value="📝 その他">📝 その他</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-slate-500 block mb-1">カスタム名（種別を上書きしたい場合のみ）</label>
+        <input type="text" id="pTitle" placeholder="例：ラストムーン3月コース" class="border p-2.5 rounded-xl w-full">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <div><label class="text-xs text-slate-500 block mb-1">予定日</label><input type="date" id="pDate" class="border p-2.5 rounded-xl w-full"></div>
+        <div>
+          <label class="text-xs text-slate-500 block mb-1">繰り返し</label>
+          <select id="pRepeat" class="border p-2.5 rounded-xl w-full">
+            <option value="none">なし（1回のみ）</option>
+            <option value="6month">6ヶ月ごと</option>
+            <option value="1year">1年ごと</option>
+            <option value="2year">2年ごと</option>
+          </select>
+        </div>
+      </div>
+      <div><label class="text-xs text-slate-500 block mb-1">予算（任意）</label><input type="number" id="pBudget" placeholder="例：30000" class="border p-2.5 rounded-xl w-full"></div>
+      <textarea id="pMemo" placeholder="メモ（担当店舗・注意事項など）" class="border p-2.5 rounded-xl w-full h-20 resize-none text-xs"></textarea>
+      <button id="savePlanBtn" class="w-full bg-teal-600 text-white py-3 rounded-xl font-bold shadow">保存する</button>
     </div>
   </div>
 </div>
@@ -549,12 +556,9 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.4.0';
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
-
-// メンテのチェックリストを表示するカテゴリの判定キーワード。
-// 部分一致（includes）で判定するため、カテゴリ名を将来編集しても追従できる。
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
 
 const firebaseConfig = {
@@ -575,12 +579,10 @@ let currentCarId = null;
 let currentDetailCarData = null;
 let cachedCategories = [];
 let cachedShops = [];
-let cachedFuelShops = []; // メンテ店舗マスタとは独立した給油専用マスタ
+let cachedFuelShops = [];
 let currentTabOrder = [...DEFAULT_TAB_ORDER];
 let activeTabKey = null;
-let chartMonthly = null;
-let chartDonut = null;
-let chartEfficiency = null;
+let chartMonthly = null, chartDonut = null, chartEfficiency = null;
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
@@ -622,13 +624,9 @@ function showToast(msg) {
   document.body.appendChild(t);
   setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity 0.4s'; setTimeout(()=>t.remove(),400); }, 2000);
 }
-function shouldShowChecklist(categoryName) {
-  return CHECKLIST_CATEGORIES.some(c => (categoryName || '').includes(c));
-}
+function shouldShowChecklist(cat) { return CHECKLIST_CATEGORIES.some(c => (cat||'').includes(c)); }
+function isStandalonePWA() { return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; }
 
-function isStandalonePWA() {
-  return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-}
 async function doLogin() {
   try {
     await setPersistence(auth, browserLocalPersistence);
@@ -636,29 +634,20 @@ async function doLogin() {
     if (isStandalonePWA()) { await signInWithPopup(auth, provider); }
     else { await signInWithRedirect(auth, provider); }
   } catch (err) {
-    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-      alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
-    }
+    if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') alert("ログインエラー\n" + err.message);
   }
 }
 $('loginBtn').addEventListener('click', doLogin);
 $('loginBtnMain').addEventListener('click', () => { $('loginStatus').classList.remove('hidden'); doLogin(); });
 $('logoutBtn').addEventListener('click', () => signOut(auth));
-getRedirectResult(auth).catch(err => {
-  if (err.code && err.code !== 'auth/null-user') {
-    alert("ログインエラー\nコード: " + err.code + "\n内容: " + err.message);
-  }
-});
+getRedirectResult(auth).catch(err => { if (err.code && err.code !== 'auth/null-user') alert("ログインエラー\n" + err.message); });
+
 onAuthStateChanged(auth, async user => {
   if (user) {
     currentUser = user;
     $('loginBtn').classList.add('hidden'); $('logoutBtn').classList.remove('hidden');
     $('unauthScreen').classList.add('hidden'); $('authScreen').classList.remove('hidden');
-    await loadTabOrder();
-    await loadCategories();
-    await loadShops();
-    await loadFuelShops();
-    await loadCars();
+    await loadTabOrder(); await loadCategories(); await loadShops(); await loadFuelShops(); await loadCars();
   } else {
     currentUser = null;
     $('loginBtn').classList.remove('hidden'); $('logoutBtn').classList.add('hidden');
@@ -667,8 +656,8 @@ onAuthStateChanged(auth, async user => {
 });
 
 $('openChangelogBtn').addEventListener('click', async () => {
-  const contentEl = $('changelogContent');
-  contentEl.innerHTML = '<p class="text-center text-slate-400 py-4">読み込み中...</p>';
+  const el = $('changelogContent');
+  el.innerHTML = '<p class="text-center text-slate-400 py-4">読み込み中...</p>';
   $('changelogModal').classList.add('active');
   try {
     const hostname = window.location.hostname;
@@ -679,12 +668,10 @@ $('openChangelogBtn').addEventListener('click', async () => {
       const repo = pathParts.length > 0 ? pathParts[0] : `${username}.github.io`;
       rawUrl = `https://raw.githubusercontent.com/${username}/${repo}/main/CHANGELOG.md`;
     }
-    const res = await fetch(rawUrl + '?t=' + new Date().getTime());
+    const res = await fetch(rawUrl + '?t=' + Date.now());
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    contentEl.innerHTML = marked.parse(await res.text());
-  } catch (err) {
-    contentEl.innerHTML = '<p class="text-center text-red-500 py-4">変更履歴の読み込みに失敗しました。</p>';
-  }
+    el.innerHTML = marked.parse(await res.text());
+  } catch { el.innerHTML = '<p class="text-center text-red-500 py-4">変更履歴の読み込みに失敗しました。</p>'; }
 });
 $('closeChangelogModal').addEventListener('click', () => $('changelogModal').classList.remove('active'));
 
@@ -698,18 +685,12 @@ async function loadTabOrder() {
       const saved = snap.data().tabOrder.filter(k => DEFAULT_TAB_ORDER.includes(k));
       DEFAULT_TAB_ORDER.forEach(k => { if (!saved.includes(k)) saved.push(k); });
       currentTabOrder = saved;
-    } else {
-      currentTabOrder = [...DEFAULT_TAB_ORDER];
-    }
-  } catch (e) {
-    currentTabOrder = [...DEFAULT_TAB_ORDER];
-  }
-  buildMainNav();
-  renderTabOrderList();
+    } else { currentTabOrder = [...DEFAULT_TAB_ORDER]; }
+  } catch { currentTabOrder = [...DEFAULT_TAB_ORDER]; }
+  buildMainNav(); renderTabOrderList();
 }
 function buildMainNav() {
-  const nav = $('mainTabNav');
-  nav.innerHTML = '';
+  const nav = $('mainTabNav'); nav.innerHTML = '';
   if (!activeTabKey || !currentTabOrder.includes(activeTabKey)) activeTabKey = currentTabOrder[0];
   currentTabOrder.forEach(key => {
     const btn = document.createElement('button');
@@ -721,8 +702,7 @@ function buildMainNav() {
       activeTabKey = key;
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-      btn.classList.add('active');
-      $(`tab-${key}`).classList.add('active');
+      btn.classList.add('active'); $(`tab-${key}`).classList.add('active');
     });
     nav.appendChild(btn);
   });
@@ -730,44 +710,20 @@ function buildMainNav() {
   $(`tab-${activeTabKey}`).classList.add('active');
 }
 function renderTabOrderList() {
-  const listEl = $('tabOrderList');
-  listEl.innerHTML = '';
+  const listEl = $('tabOrderList'); listEl.innerHTML = '';
   currentTabOrder.forEach((key, idx) => {
-    const li = document.createElement('li');
-    li.className = 'flex items-center gap-2 py-2';
-    li.innerHTML = `
-      <div class="flex flex-col gap-0.5">
-        <button class="sort-btn tabUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
-        <button class="sort-btn tabDown" data-idx="${idx}" ${idx===currentTabOrder.length-1?'disabled':''}>▼</button>
-      </div>
-      <span class="flex-1 font-semibold text-sm">${TAB_LABELS[key]||key}</span>`;
+    const li = document.createElement('li'); li.className = 'flex items-center gap-2 py-2';
+    li.innerHTML = `<div class="flex flex-col gap-0.5"><button class="sort-btn tabUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button><button class="sort-btn tabDown" data-idx="${idx}" ${idx===currentTabOrder.length-1?'disabled':''}>▼</button></div><span class="flex-1 font-semibold text-sm">${TAB_LABELS[key]||key}</span>`;
     listEl.appendChild(li);
   });
-  listEl.querySelectorAll('.tabUp').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.idx); if (idx === 0) return;
-      [currentTabOrder[idx-1], currentTabOrder[idx]] = [currentTabOrder[idx], currentTabOrder[idx-1]];
-      await saveTabOrder();
-    });
-  });
-  listEl.querySelectorAll('.tabDown').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const idx = parseInt(btn.dataset.idx); if (idx === currentTabOrder.length - 1) return;
-      [currentTabOrder[idx], currentTabOrder[idx+1]] = [currentTabOrder[idx+1], currentTabOrder[idx]];
-      await saveTabOrder();
-    });
-  });
+  listEl.querySelectorAll('.tabUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; [currentTabOrder[i-1],currentTabOrder[i]]=[currentTabOrder[i],currentTabOrder[i-1]]; await saveTabOrder(); }); });
+  listEl.querySelectorAll('.tabDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===currentTabOrder.length-1) return; [currentTabOrder[i],currentTabOrder[i+1]]=[currentTabOrder[i+1],currentTabOrder[i]]; await saveTabOrder(); }); });
 }
 async function saveTabOrder() {
   await setDoc(doc(db, `users/${currentUser.uid}/settings/appSettings`), { tabOrder: currentTabOrder }, { merge: true });
-  buildMainNav(); renderTabOrderList();
-  showToast('タブの順序を保存しました');
+  buildMainNav(); renderTabOrderList(); showToast('タブの順序を保存しました');
 }
-$('resetTabOrderBtn').addEventListener('click', async () => {
-  currentTabOrder = [...DEFAULT_TAB_ORDER];
-  await saveTabOrder();
-  showToast('初期の並び順に戻しました');
-});
+$('resetTabOrderBtn').addEventListener('click', async () => { currentTabOrder=[...DEFAULT_TAB_ORDER]; await saveTabOrder(); showToast('初期の並び順に戻しました'); });
 
 // ============================================================
 // カテゴリマスタ
@@ -776,297 +732,243 @@ async function loadCategories() {
   const colRef = collection(db, `users/${currentUser.uid}/categories`);
   let allSnap = await getDocs(colRef);
   if (allSnap.empty) {
-    const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換",
-      "エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
+    const defaults = ["オイル交換","タイヤ交換・ローテーション","バッテリー交換","ブレーキパッド交換","エアフィルター交換","ワイパー交換","車検整備","定期点検（6ヶ月・12ヶ月）","板金・塗装","洗車・コーティング","その他"];
     const batch = writeBatch(db);
     defaults.forEach((name, i) => { batch.set(doc(colRef), { name, sortOrder: i, createdAt: serverTimestamp() }); });
-    await batch.commit();
-    allSnap = await getDocs(colRef);
+    await batch.commit(); allSnap = await getDocs(colRef);
   } else if (allSnap.docs.some(d => d.data().sortOrder === undefined)) {
-    const sorted = allSnap.docs.slice().sort((a, b) =>
-      (a.data().createdAt?.toMillis?.() || 0) - (b.data().createdAt?.toMillis?.() || 0));
+    const sorted = allSnap.docs.slice().sort((a,b) => (a.data().createdAt?.toMillis?.()||0)-(b.data().createdAt?.toMillis?.()||0));
     const batch = writeBatch(db);
-    sorted.forEach((d, i) => { if (d.data().sortOrder === undefined) batch.update(doc(colRef, d.id), { sortOrder: i }); });
-    await batch.commit();
-    allSnap = await getDocs(colRef);
+    sorted.forEach((d,i) => { if(d.data().sortOrder===undefined) batch.update(doc(colRef,d.id),{sortOrder:i}); });
+    await batch.commit(); allSnap = await getDocs(colRef);
   }
-  cachedCategories = allSnap.docs.map(d => ({ id: d.id, ...d.data() }))
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  renderCategoryList();
-  renderCategorySelects();
+  cachedCategories = allSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.sortOrder??0)-(b.sortOrder??0));
+  renderCategoryList(); renderCategorySelects();
 }
 function renderCategoryList() {
-  const listEl = $('categoryList');
-  listEl.innerHTML = '';
+  const listEl = $('categoryList'); listEl.innerHTML = '';
   cachedCategories.forEach((cat, idx) => {
-    const li = document.createElement('li');
-    li.className = 'flex items-center gap-1.5 py-1.5';
-    li.innerHTML = `
-      <div class="flex flex-col gap-0.5">
-        <button class="sort-btn catUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
-        <button class="sort-btn catDown" data-idx="${idx}" ${idx===cachedCategories.length-1?'disabled':''}>▼</button>
-      </div>
-      <input type="text" value="${cat.name}" data-id="${cat.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
-      <button class="catDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded" data-id="${cat.id}">削除</button>`;
+    const li = document.createElement('li'); li.className = 'flex items-center gap-1.5 py-1.5';
+    li.innerHTML = `<div class="flex flex-col gap-0.5"><button class="sort-btn catUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button><button class="sort-btn catDown" data-idx="${idx}" ${idx===cachedCategories.length-1?'disabled':''}>▼</button></div><input type="text" value="${cat.name}" data-id="${cat.id}" class="catEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm"><button class="catDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded" data-id="${cat.id}">削除</button>`;
     listEl.appendChild(li);
   });
-  listEl.querySelectorAll('.catUp').forEach(btn => {
-    btn.addEventListener('click', async () => { const idx=parseInt(btn.dataset.idx); if(idx===0) return; await swapSortOrder('categories', cachedCategories, idx, idx-1); await loadCategories(); });
-  });
-  listEl.querySelectorAll('.catDown').forEach(btn => {
-    btn.addEventListener('click', async () => { const idx=parseInt(btn.dataset.idx); if(idx===cachedCategories.length-1) return; await swapSortOrder('categories', cachedCategories, idx, idx+1); await loadCategories(); });
-  });
-  listEl.querySelectorAll('.catEditInput').forEach(inp => {
-    inp.addEventListener('change', async () => { if(!inp.value.trim()) return; await updateDoc(doc(db,`users/${currentUser.uid}/categories`,inp.dataset.id),{name:inp.value.trim()}); await loadCategories(); });
-  });
-  listEl.querySelectorAll('.catDelBtn').forEach(btn => {
-    btn.addEventListener('click', async () => { if(!confirm('このカテゴリを削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/categories`,btn.dataset.id)); await loadCategories(); });
-  });
+  listEl.querySelectorAll('.catUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('categories',cachedCategories,i,i-1); await loadCategories(); }); });
+  listEl.querySelectorAll('.catDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedCategories.length-1) return; await swapSortOrder('categories',cachedCategories,i,i+1); await loadCategories(); }); });
+  listEl.querySelectorAll('.catEditInput').forEach(inp => { inp.addEventListener('change', async () => { if(!inp.value.trim()) return; await updateDoc(doc(db,`users/${currentUser.uid}/categories`,inp.dataset.id),{name:inp.value.trim()}); await loadCategories(); }); });
+  listEl.querySelectorAll('.catDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/categories`,btn.dataset.id)); await loadCategories(); }); });
 }
-async function swapSortOrder(colName, cache, idxA, idxB) {
-  const a = cache[idxA], b = cache[idxB];
-  const tmp = a.sortOrder;
-  await updateDoc(doc(db, `users/${currentUser.uid}/${colName}`, a.id), { sortOrder: b.sortOrder });
-  await updateDoc(doc(db, `users/${currentUser.uid}/${colName}`, b.id), { sortOrder: tmp });
+async function swapSortOrder(colName, cache, iA, iB) {
+  const a=cache[iA], b=cache[iB], tmp=a.sortOrder;
+  await updateDoc(doc(db,`users/${currentUser.uid}/${colName}`,a.id),{sortOrder:b.sortOrder});
+  await updateDoc(doc(db,`users/${currentUser.uid}/${colName}`,b.id),{sortOrder:tmp});
 }
 function renderCategorySelects() {
-  const sel = $('mCategory');
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">作業カテゴリを選択</option>';
-  cachedCategories.forEach(cat => { const opt=document.createElement('option'); opt.value=cat.name; opt.textContent=cat.name; sel.appendChild(opt); });
-  if (prev) sel.value = prev;
+  const sel=$('mCategory'), prev=sel.value;
+  sel.innerHTML='<option value="">作業カテゴリを選択</option>';
+  cachedCategories.forEach(cat=>{ const o=document.createElement('option'); o.value=cat.name; o.textContent=cat.name; sel.appendChild(o); });
+  if(prev) sel.value=prev;
 }
-// カテゴリ選択が変わったらチェックリストの表示/非表示を切り替える
-$('mCategory').addEventListener('change', () => {
-  const show = shouldShowChecklist($('mCategory').value);
-  $('workChecklistBlock').classList.toggle('hidden', !show);
-});
-function renderWorkChecklist(checkedItems = []) {
-  const container = $('workChecklist');
-  if (!container) return;
-  container.innerHTML = '';
+$('mCategory').addEventListener('change', () => { $('workChecklistBlock').classList.toggle('hidden', !shouldShowChecklist($('mCategory').value)); });
+function renderWorkChecklist(checked=[]) {
+  const c=$('workChecklist'); if(!c) return; c.innerHTML='';
   cachedCategories.forEach(cat => {
-    const label = document.createElement('label');
-    label.className = 'flex items-center gap-1.5 text-xs cursor-pointer py-0.5';
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.value = cat.name; cb.className = 'workCheckItem w-4 h-4 accent-green-600';
-    if (checkedItems.includes(cat.name)) cb.checked = true;
-    label.appendChild(cb); label.append(cat.name);
-    container.appendChild(label);
+    const lbl=document.createElement('label'); lbl.className='flex items-center gap-1.5 text-xs cursor-pointer py-0.5';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.value=cat.name; cb.className='workCheckItem w-4 h-4 accent-green-600';
+    if(checked.includes(cat.name)) cb.checked=true;
+    lbl.appendChild(cb); lbl.append(cat.name); c.appendChild(lbl);
   });
 }
 $('addCategoryBtn').addEventListener('click', async () => {
-  const name = $('newCategoryName').value.trim(); if (!name) return;
-  const maxOrder = cachedCategories.length > 0 ? Math.max(...cachedCategories.map(c => c.sortOrder ?? 0)) : -1;
-  await addDoc(collection(db, `users/${currentUser.uid}/categories`), { name, sortOrder: maxOrder + 1, createdAt: serverTimestamp() });
-  $('newCategoryName').value = '';
-  await loadCategories();
+  const name=$('newCategoryName').value.trim(); if(!name) return;
+  const maxOrder=cachedCategories.length>0?Math.max(...cachedCategories.map(c=>c.sortOrder??0)):-1;
+  await addDoc(collection(db,`users/${currentUser.uid}/categories`),{name,sortOrder:maxOrder+1,createdAt:serverTimestamp()});
+  $('newCategoryName').value=''; await loadCategories();
 });
 
 // ============================================================
-// 店舗マスタ（メンテ・チケット用）
+// 店舗マスタ（メンテ用・インライン編集対応）
 // ============================================================
 async function loadShops() {
-  const colRef = collection(db, `users/${currentUser.uid}/shops`);
+  const colRef = collection(db,`users/${currentUser.uid}/shops`);
   let allSnap = await getDocs(colRef);
-  if (!allSnap.empty && allSnap.docs.some(d => d.data().sortOrder === undefined)) {
-    const sorted = allSnap.docs.slice().sort((a, b) => (a.data().createdAt?.toMillis?.() || 0) - (b.data().createdAt?.toMillis?.() || 0));
-    const batch = writeBatch(db);
-    sorted.forEach((d, i) => { if (d.data().sortOrder === undefined) batch.update(doc(colRef, d.id), { sortOrder: i }); });
-    await batch.commit();
-    allSnap = await getDocs(colRef);
+  if(!allSnap.empty && allSnap.docs.some(d=>d.data().sortOrder===undefined)) {
+    const sorted=allSnap.docs.slice().sort((a,b)=>(a.data().createdAt?.toMillis?.()||0)-(b.data().createdAt?.toMillis?.()||0));
+    const batch=writeBatch(db); sorted.forEach((d,i)=>{if(d.data().sortOrder===undefined) batch.update(doc(colRef,d.id),{sortOrder:i});});
+    await batch.commit(); allSnap=await getDocs(colRef);
   }
-  cachedShops = allSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  renderShopList();
-  renderShopSelects();
+  cachedShops=allSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.sortOrder??0)-(b.sortOrder??0));
+  renderShopList(); renderShopSelects();
 }
 function renderShopList() {
-  const listEl = $('shopList');
-  listEl.innerHTML = '';
-  cachedShops.forEach((shop, idx) => {
-    const li = document.createElement('li');
-    li.className = 'flex items-center gap-1.5 py-1.5 text-sm';
-    li.innerHTML = `
-      <div class="flex flex-col gap-0.5">
-        <button class="sort-btn shopUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
-        <button class="sort-btn shopDown" data-idx="${idx}" ${idx===cachedShops.length-1?'disabled':''}>▼</button>
-      </div>
-      <span class="flex-1">${shop.name}（${shop.tel||'-'}）</span>
-      <button class="shopDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded" data-id="${shop.id}">削除</button>`;
+  const listEl=$('shopList'); listEl.innerHTML='';
+  cachedShops.forEach((shop,idx) => {
+    const li=document.createElement('li'); li.className='py-2 border-b border-slate-100 last:border-0';
+    li.innerHTML=`
+      <div class="flex items-center gap-1.5">
+        <div class="flex flex-col gap-0.5">
+          <button class="sort-btn shopUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
+          <button class="sort-btn shopDown" data-idx="${idx}" ${idx===cachedShops.length-1?'disabled':''}>▼</button>
+        </div>
+        <div class="flex-1 space-y-1">
+          <input type="text" value="${shop.name}" data-id="${shop.id}" data-field="name" class="shopEditInput w-full border border-slate-200 rounded px-2 py-1 text-sm">
+          <input type="tel" value="${shop.tel||''}" data-id="${shop.id}" data-field="tel" class="shopEditInput w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-500" placeholder="電話番号">
+        </div>
+        <button class="shopDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded flex-shrink-0" data-id="${shop.id}">削除</button>
+      </div>`;
     listEl.appendChild(li);
   });
-  listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const idx=parseInt(btn.dataset.idx); if(idx===0) return; await swapSortOrder('shops', cachedShops, idx, idx-1); await loadShops(); }); });
-  listEl.querySelectorAll('.shopDown').forEach(btn => { btn.addEventListener('click', async () => { const idx=parseInt(btn.dataset.idx); if(idx===cachedShops.length-1) return; await swapSortOrder('shops', cachedShops, idx, idx+1); await loadShops(); }); });
-  listEl.querySelectorAll('.shopDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('この店舗を削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/shops`,btn.dataset.id)); await loadShops(); }); });
+  listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('shops',cachedShops,i,i-1); await loadShops(); }); });
+  listEl.querySelectorAll('.shopDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedShops.length-1) return; await swapSortOrder('shops',cachedShops,i,i+1); await loadShops(); }); });
+  listEl.querySelectorAll('.shopEditInput').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      const upd={}; upd[inp.dataset.field]=inp.value.trim();
+      await updateDoc(doc(db,`users/${currentUser.uid}/shops`,inp.dataset.id),upd);
+      await loadShops(); showToast('店舗情報を更新しました');
+    });
+  });
+  listEl.querySelectorAll('.shopDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/shops`,btn.dataset.id)); await loadShops(); }); });
 }
 function renderShopSelects() {
-  [$('mShop'), $('tShopSelect')].forEach(sel => {
-    if (!sel) return;
-    const prev = sel.value;
-    sel.innerHTML = '<option value="">店舗を選択</option>';
-    cachedShops.forEach(shop => { const opt=document.createElement('option'); opt.value=shop.name; opt.textContent=shop.name; sel.appendChild(opt); });
-    if (prev) sel.value = prev;
+  [$('mShop'),$('tShopSelect')].forEach(sel => {
+    if(!sel) return; const prev=sel.value;
+    sel.innerHTML='<option value="">店舗を選択</option>';
+    cachedShops.forEach(s=>{ const o=document.createElement('option'); o.value=s.name; o.textContent=s.name; sel.appendChild(o); });
+    if(prev) sel.value=prev;
   });
 }
 $('addShopBtn').addEventListener('click', async () => {
-  const name = $('newShopName').value.trim(); if (!name) return;
-  const maxOrder = cachedShops.length > 0 ? Math.max(...cachedShops.map(s => s.sortOrder ?? 0)) : -1;
-  await addDoc(collection(db, `users/${currentUser.uid}/shops`), { name, tel: $('newShopTel').value.trim(), sortOrder: maxOrder + 1, createdAt: serverTimestamp() });
-  $('newShopName').value = ''; $('newShopTel').value = '';
-  await loadShops();
+  const name=$('newShopName').value.trim(); if(!name) return;
+  const maxOrder=cachedShops.length>0?Math.max(...cachedShops.map(s=>s.sortOrder??0)):-1;
+  await addDoc(collection(db,`users/${currentUser.uid}/shops`),{name,tel:$('newShopTel').value.trim(),sortOrder:maxOrder+1,createdAt:serverTimestamp()});
+  $('newShopName').value=''; $('newShopTel').value=''; await loadShops();
 });
 
 // ============================================================
-// 給油店舗マスタ（メンテ店舗マスタとは完全に独立）
+// 給油店舗マスタ（メンテ店舗マスタとは独立・インライン編集対応）
 // ============================================================
 async function loadFuelShops() {
-  const colRef = collection(db, `users/${currentUser.uid}/fuelShops`);
-  let allSnap = await getDocs(colRef);
-  if (!allSnap.empty && allSnap.docs.some(d => d.data().sortOrder === undefined)) {
-    const sorted = allSnap.docs.slice().sort((a, b) => (a.data().createdAt?.toMillis?.() || 0) - (b.data().createdAt?.toMillis?.() || 0));
-    const batch = writeBatch(db);
-    sorted.forEach((d, i) => { if (d.data().sortOrder === undefined) batch.update(doc(colRef, d.id), { sortOrder: i }); });
-    await batch.commit();
-    allSnap = await getDocs(colRef);
+  const colRef=collection(db,`users/${currentUser.uid}/fuelShops`);
+  let allSnap=await getDocs(colRef);
+  if(!allSnap.empty && allSnap.docs.some(d=>d.data().sortOrder===undefined)) {
+    const sorted=allSnap.docs.slice().sort((a,b)=>(a.data().createdAt?.toMillis?.()||0)-(b.data().createdAt?.toMillis?.()||0));
+    const batch=writeBatch(db); sorted.forEach((d,i)=>{if(d.data().sortOrder===undefined) batch.update(doc(colRef,d.id),{sortOrder:i});});
+    await batch.commit(); allSnap=await getDocs(colRef);
   }
-  cachedFuelShops = allSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-  renderFuelShopList();
-  renderFuelShopSelects();
+  cachedFuelShops=allSnap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.sortOrder??0)-(b.sortOrder??0));
+  renderFuelShopList(); renderFuelShopSelects();
 }
 function renderFuelShopList() {
-  const listEl = $('fuelShopList');
-  listEl.innerHTML = '';
-  cachedFuelShops.forEach((shop, idx) => {
-    const li = document.createElement('li');
-    li.className = 'flex items-center gap-1.5 py-1.5 text-sm';
-    li.innerHTML = `
-      <div class="flex flex-col gap-0.5">
-        <button class="sort-btn fuelShopUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
-        <button class="sort-btn fuelShopDown" data-idx="${idx}" ${idx===cachedFuelShops.length-1?'disabled':''}>▼</button>
-      </div>
-      <span class="flex-1">${shop.name}</span>
-      <button class="fuelShopDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded" data-id="${shop.id}">削除</button>`;
+  const listEl=$('fuelShopList'); listEl.innerHTML='';
+  cachedFuelShops.forEach((shop,idx) => {
+    const li=document.createElement('li'); li.className='py-2 border-b border-slate-100 last:border-0';
+    li.innerHTML=`
+      <div class="flex items-center gap-1.5">
+        <div class="flex flex-col gap-0.5">
+          <button class="sort-btn fuelShopUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button>
+          <button class="sort-btn fuelShopDown" data-idx="${idx}" ${idx===cachedFuelShops.length-1?'disabled':''}>▼</button>
+        </div>
+        <input type="text" value="${shop.name}" data-id="${shop.id}" class="fuelShopEditInput flex-1 border border-slate-200 rounded px-2 py-1 text-sm">
+        <button class="fuelShopDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded flex-shrink-0" data-id="${shop.id}">削除</button>
+      </div>`;
     listEl.appendChild(li);
   });
-  listEl.querySelectorAll('.fuelShopUp').forEach(btn => { btn.addEventListener('click', async () => { const idx=parseInt(btn.dataset.idx); if(idx===0) return; await swapSortOrder('fuelShops', cachedFuelShops, idx, idx-1); await loadFuelShops(); }); });
-  listEl.querySelectorAll('.fuelShopDown').forEach(btn => { btn.addEventListener('click', async () => { const idx=parseInt(btn.dataset.idx); if(idx===cachedFuelShops.length-1) return; await swapSortOrder('fuelShops', cachedFuelShops, idx, idx+1); await loadFuelShops(); }); });
-  listEl.querySelectorAll('.fuelShopDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('この給油店舗を削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/fuelShops`,btn.dataset.id)); await loadFuelShops(); }); });
+  listEl.querySelectorAll('.fuelShopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('fuelShops',cachedFuelShops,i,i-1); await loadFuelShops(); }); });
+  listEl.querySelectorAll('.fuelShopDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedFuelShops.length-1) return; await swapSortOrder('fuelShops',cachedFuelShops,i,i+1); await loadFuelShops(); }); });
+  listEl.querySelectorAll('.fuelShopEditInput').forEach(inp => {
+    inp.addEventListener('change', async () => {
+      if(!inp.value.trim()) return;
+      await updateDoc(doc(db,`users/${currentUser.uid}/fuelShops`,inp.dataset.id),{name:inp.value.trim()});
+      await loadFuelShops(); showToast('給油店舗名を更新しました');
+    });
+  });
+  listEl.querySelectorAll('.fuelShopDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/fuelShops`,btn.dataset.id)); await loadFuelShops(); }); });
 }
 function renderFuelShopSelects() {
-  const sel = $('fShopSelect');
-  if (!sel) return;
-  const prev = sel.value;
-  sel.innerHTML = '<option value="">給油店舗マスタから選択</option>';
-  cachedFuelShops.forEach(shop => { const opt=document.createElement('option'); opt.value=shop.name; opt.textContent=shop.name; sel.appendChild(opt); });
-  if (prev) sel.value = prev;
+  const sel=$('fShopSelect'); if(!sel) return; const prev=sel.value;
+  sel.innerHTML='<option value="">給油店舗マスタから選択</option>';
+  cachedFuelShops.forEach(s=>{ const o=document.createElement('option'); o.value=s.name; o.textContent=s.name; sel.appendChild(o); });
+  if(prev) sel.value=prev;
 }
 $('addFuelShopBtn').addEventListener('click', async () => {
-  const name = $('newFuelShopName').value.trim(); if (!name) return;
-  const maxOrder = cachedFuelShops.length > 0 ? Math.max(...cachedFuelShops.map(s => s.sortOrder ?? 0)) : -1;
-  await addDoc(collection(db, `users/${currentUser.uid}/fuelShops`), { name, sortOrder: maxOrder + 1, createdAt: serverTimestamp() });
-  $('newFuelShopName').value = '';
-  await loadFuelShops();
+  const name=$('newFuelShopName').value.trim(); if(!name) return;
+  const maxOrder=cachedFuelShops.length>0?Math.max(...cachedFuelShops.map(s=>s.sortOrder??0)):-1;
+  await addDoc(collection(db,`users/${currentUser.uid}/fuelShops`),{name,sortOrder:maxOrder+1,createdAt:serverTimestamp()});
+  $('newFuelShopName').value=''; await loadFuelShops();
 });
 
 // ============================================================
-// 保険料の3年合計リアルタイム計算
+// 保険料3年合計リアルタイム計算
 // ============================================================
 function updateFeeTotalDisplay() {
-  const f1 = Number($('iAnnualFee1').value) || 0;
-  const f2 = Number($('iAnnualFee2').value) || 0;
-  const f3 = Number($('iAnnualFee3').value) || 0;
-  const total = f1 + f2 + f3;
-  $('iFeeTotalDisplay').textContent = total > 0 ? `¥${total.toLocaleString()}` : '- 円';
+  const total=(Number($('iAnnualFee1').value)||0)+(Number($('iAnnualFee2').value)||0)+(Number($('iAnnualFee3').value)||0);
+  $('iFeeTotalDisplay').textContent=total>0?`¥${total.toLocaleString()}`:'- 円';
 }
-['iAnnualFee1','iAnnualFee2','iAnnualFee3'].forEach(id => { $(id).addEventListener('input', updateFeeTotalDisplay); });
+['iAnnualFee1','iAnnualFee2','iAnnualFee3'].forEach(id=>$(id).addEventListener('input',updateFeeTotalDisplay));
 
 // ============================================================
 // 車両詳細モーダル
 // ============================================================
 function openDetailModal(carId, carData) {
-  currentDetailCarData = { id: carId, ...carData };
-  $('detailCarName').textContent = carData.nickname;
-  $('detailCarSub').textContent = `${carData.maker||''} ${carData.model||''} ${carData.plate?'／'+carData.plate:''}`;
-  $('d-odo').textContent = (carData.odo||0).toLocaleString() + ' km';
-  $('d-maker').textContent = carData.maker||'-'; $('d-model').textContent = carData.model||'-';
-  $('d-type').textContent = carData.carType||'-'; $('d-year').textContent = carData.year||'-';
-  $('d-plate').textContent = carData.plate||'-'; $('d-vin').textContent = carData.vin||'-';
-  $('d-fuel').textContent = carData.fuelType||'-'; $('d-drive').textContent = carData.driveType||'-';
-  const shakenDays = daysUntil(carData.shaken); const shakenBadge = expiryBadge(shakenDays);
-  $('d-shaken').textContent = carData.shaken||'未設定';
-  $('d-shaken-days').textContent = shakenDays !== null ? shakenBadge.label : '';
-  $('d-shaken-card').className = `col-span-2 p-3 rounded-xl ${shakenBadge.cls}`;
-  const sp = carData.specs||{};
-  $('d-spec-tire').textContent = sp.tireSize||'-'; $('d-spec-air').textContent = sp.tirePressure||'-';
-  $('d-spec-oil').textContent = sp.oilViscosity||'-'; $('d-spec-battery').textContent = sp.batteryModel||'-';
-  $('d-spec-wiper').textContent = sp.wiperSize||'-';
-
-  const ins = carData.insurance||{};
-  $('ins-company').textContent = ins.company||'未登録（証券で要確認）';
-  $('ins-policy').textContent = ins.policyNo||'-'; $('ins-grade').textContent = ins.grade||'-';
-  $('ins-condition').textContent = ins.condition||'-'; $('ins-staff').textContent = ins.staffName||'-';
-  $('ins-memo').textContent = ins.memo||'-'; $('ins-agency').textContent = ins.agencyName||'-';
-
-  const f1 = Number(ins.annualFee1)||0, f2 = Number(ins.annualFee2)||0, f3 = Number(ins.annualFee3)||0;
-  const fTotal = f1 + f2 + f3;
-  $('ins-fee1').textContent = f1 > 0 ? `¥${f1.toLocaleString()}` : '-';
-  $('ins-fee2').textContent = f2 > 0 ? `¥${f2.toLocaleString()}` : '-';
-  $('ins-fee3').textContent = f3 > 0 ? `¥${f3.toLocaleString()}` : '-';
-  $('ins-fee-total').textContent = fTotal > 0 ? `¥${fTotal.toLocaleString()}` : '-';
-
-  const insTel = ins.staffTel||'';
-  $('ins-tel-link').href = insTel ? `tel:${insTel}` : '#'; $('ins-tel-text').textContent = insTel||'未登録';
-  const insAgencyTel = ins.agencyTel||'';
-  $('ins-agency-tel-link').href = insAgencyTel ? `tel:${insAgencyTel}` : '#';
-  $('ins-agency-tel-text').textContent = insAgencyTel;
-  const insExpDays = daysUntil(ins.expiry); const insExpBadge = expiryBadge(insExpDays);
-  $('ins-expiry').textContent = ins.expiry||'未設定';
-  $('ins-expiry-days').textContent = insExpDays !== null ? insExpBadge.label : '';
-  $('ins-expiry-card').className = `p-2 rounded-lg ${insExpBadge.cls}`;
-
-  const jibai = carData.jibaiInsurance||{};
-  $('jibai-policy-title').textContent = jibai.policyNo ? '自賠責' : '未登録';
-  $('jibai-policy').textContent = jibai.policyNo||'-';
-  const jibaiExpDays = daysUntil(jibai.expiry); const jibaiExpBadge = expiryBadge(jibaiExpDays);
-  $('jibai-expiry').textContent = jibai.expiry||'未設定';
-  $('jibai-expiry-days').textContent = jibaiExpDays !== null ? jibaiExpBadge.label : '';
-  $('jibai-expiry-card').className = `p-2 rounded-lg ${jibaiExpBadge.cls}`;
-
-  const tire = carData.tire||{}; const ts = tire.summer||{}; const tw = tire.winter||{};
-  $('ts-size').textContent = ts.size||'-'; $('ts-brand').textContent = ts.brand||'-';
-  $('ts-made').textContent = ts.made||'-'; $('ts-date').textContent = ts.date||'-';
-  const tsBadge = tireAgeBadge(ts.made);
-  $('tire-summer-age').textContent = tsBadge ? tsBadge.label : '';
-  $('tire-summer-age').className = `text-xs px-2 py-0.5 rounded-full ${tsBadge?tsBadge.cls:''}`;
-  $('tw-size').textContent = tw.size||'-'; $('tw-brand').textContent = tw.brand||'-';
-  $('tw-made').textContent = tw.made||'-'; $('tw-storage').textContent = tw.storage||'-';
-  const twBadge = tireAgeBadge(tw.made);
-  $('tire-winter-age').textContent = twBadge ? twBadge.label : '';
-  $('tire-winter-age').className = `text-xs px-2 py-0.5 rounded-full ${twBadge?twBadge.cls:''}`;
-
-  document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
-  document.querySelector('[data-dtarget="dtab-basic"]').classList.add('active');
-  $('dtab-basic').classList.remove('hidden');
+  currentDetailCarData={id:carId,...carData};
+  $('detailCarName').textContent=carData.nickname;
+  $('detailCarSub').textContent=`${carData.maker||''} ${carData.model||''} ${carData.plate?'／'+carData.plate:''}`;
+  $('d-odo').textContent=(carData.odo||0).toLocaleString()+' km';
+  $('d-maker').textContent=carData.maker||'-'; $('d-model').textContent=carData.model||'-';
+  $('d-type').textContent=carData.carType||'-'; $('d-year').textContent=carData.year||'-';
+  $('d-plate').textContent=carData.plate||'-'; $('d-vin').textContent=carData.vin||'-';
+  $('d-fuel').textContent=carData.fuelType||'-'; $('d-drive').textContent=carData.driveType||'-';
+  const sd=daysUntil(carData.shaken), sb=expiryBadge(sd);
+  $('d-shaken').textContent=carData.shaken||'未設定'; $('d-shaken-days').textContent=sd!==null?sb.label:'';
+  $('d-shaken-card').className=`col-span-2 p-3 rounded-xl ${sb.cls}`;
+  const sp=carData.specs||{};
+  $('d-spec-tire').textContent=sp.tireSize||'-'; $('d-spec-air').textContent=sp.tirePressure||'-';
+  $('d-spec-oil').textContent=sp.oilViscosity||'-'; $('d-spec-battery').textContent=sp.batteryModel||'-'; $('d-spec-wiper').textContent=sp.wiperSize||'-';
+  const ins=carData.insurance||{};
+  $('ins-company').textContent=ins.company||'未登録'; $('ins-policy').textContent=ins.policyNo||'-';
+  $('ins-grade').textContent=ins.grade||'-'; $('ins-condition').textContent=ins.condition||'-';
+  $('ins-staff').textContent=ins.staffName||'-'; $('ins-memo').textContent=ins.memo||'-'; $('ins-agency').textContent=ins.agencyName||'-';
+  const f1=Number(ins.annualFee1)||0,f2=Number(ins.annualFee2)||0,f3=Number(ins.annualFee3)||0,ft=f1+f2+f3;
+  $('ins-fee1').textContent=f1>0?`¥${f1.toLocaleString()}`:'-';
+  $('ins-fee2').textContent=f2>0?`¥${f2.toLocaleString()}`:'-';
+  $('ins-fee3').textContent=f3>0?`¥${f3.toLocaleString()}`:'-';
+  $('ins-fee-total').textContent=ft>0?`¥${ft.toLocaleString()}`:'-';
+  const insTel=ins.staffTel||'';
+  $('ins-tel-link').href=insTel?`tel:${insTel}`:'#'; $('ins-tel-text').textContent=insTel||'未登録';
+  const iat=ins.agencyTel||'';
+  $('ins-agency-tel-link').href=iat?`tel:${iat}`:'#'; $('ins-agency-tel-text').textContent=iat;
+  const ied=daysUntil(ins.expiry),ieb=expiryBadge(ied);
+  $('ins-expiry').textContent=ins.expiry||'未設定'; $('ins-expiry-days').textContent=ied!==null?ieb.label:''; $('ins-expiry-card').className=`p-2 rounded-lg ${ieb.cls}`;
+  const jibai=carData.jibaiInsurance||{};
+  $('jibai-policy-title').textContent=jibai.policyNo?'自賠責':'未登録'; $('jibai-policy').textContent=jibai.policyNo||'-';
+  const jed=daysUntil(jibai.expiry),jeb=expiryBadge(jed);
+  $('jibai-expiry').textContent=jibai.expiry||'未設定'; $('jibai-expiry-days').textContent=jed!==null?jeb.label:''; $('jibai-expiry-card').className=`p-2 rounded-lg ${jeb.cls}`;
+  const tire=carData.tire||{},ts=tire.summer||{},tw=tire.winter||{};
+  $('ts-size').textContent=ts.size||'-'; $('ts-brand').textContent=ts.brand||'-'; $('ts-made').textContent=ts.made||'-'; $('ts-date').textContent=ts.date||'-';
+  const tsb=tireAgeBadge(ts.made); $('tire-summer-age').textContent=tsb?tsb.label:''; $('tire-summer-age').className=`text-xs px-2 py-0.5 rounded-full ${tsb?tsb.cls:''}`;
+  $('tw-size').textContent=tw.size||'-'; $('tw-brand').textContent=tw.brand||'-'; $('tw-made').textContent=tw.made||'-'; $('tw-storage').textContent=tw.storage||'-';
+  const twb=tireAgeBadge(tw.made); $('tire-winter-age').textContent=twb?twb.label:''; $('tire-winter-age').className=`text-xs px-2 py-0.5 rounded-full ${twb?twb.cls:''}`;
+  document.querySelectorAll('.detail-tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.detail-tab-content').forEach(c=>c.classList.add('hidden'));
+  document.querySelector('[data-dtarget="dtab-basic"]').classList.add('active'); $('dtab-basic').classList.remove('hidden');
   loadTicketList(carId);
   $('carDetailModal').classList.add('active');
 }
-$('closeDetailModal').addEventListener('click', () => $('carDetailModal').classList.remove('active'));
+$('closeDetailModal').addEventListener('click',()=>$('carDetailModal').classList.remove('active'));
 
 document.querySelectorAll('.detail-tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.detail-tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.detail-tab-content').forEach(c => c.classList.add('hidden'));
-    btn.classList.add('active');
-    $(btn.dataset.dtarget).classList.remove('hidden');
-    if (btn.dataset.dtarget === 'dtab-analysis' && currentDetailCarData) loadAnalysis(currentDetailCarData.id, currentDetailCarData);
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.detail-tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.detail-tab-content').forEach(c=>c.classList.add('hidden'));
+    btn.classList.add('active'); $(btn.dataset.dtarget).classList.remove('hidden');
+    if(btn.dataset.dtarget==='dtab-analysis'&&currentDetailCarData) loadAnalysis(currentDetailCarData.id,currentDetailCarData);
+    if(btn.dataset.dtarget==='dtab-plan'&&currentDetailCarData) loadPlanTab(currentDetailCarData.id,currentDetailCarData);
   });
 });
 
-$('editCarBtn').addEventListener('click', () => {
-  if (!currentDetailCarData) return;
-  const c = currentDetailCarData; const sp = c.specs||{};
-  $('carDocId').value = c.id; $('carModalTitle').textContent = '車両情報を編集';
+$('editCarBtn').addEventListener('click',()=>{
+  if(!currentDetailCarData) return;
+  const c=currentDetailCarData,sp=c.specs||{};
+  $('carDocId').value=c.id; $('carModalTitle').textContent='車両情報を編集';
   $('cNickname').value=c.nickname||''; $('cMaker').value=c.maker||''; $('cModel').value=c.model||'';
   $('cCarType').value=c.carType||''; $('cYear').value=c.year||''; $('cPlate').value=c.plate||'';
   $('cVin').value=c.vin||''; $('cFuelType').value=c.fuelType||''; $('cDriveType').value=c.driveType||'';
@@ -1075,34 +977,32 @@ $('editCarBtn').addEventListener('click', () => {
   $('cSpecOil').value=sp.oilViscosity||''; $('cSpecBattery').value=sp.batteryModel||''; $('cSpecWiper').value=sp.wiperSize||'';
   $('carDetailModal').classList.remove('active'); $('carModal').classList.add('active');
 });
-$('closeCarModal').addEventListener('click', () => $('carModal').classList.remove('active'));
-$('saveCarBtn').addEventListener('click', async () => {
-  const nickname = $('cNickname').value.trim(); if (!nickname) return alert('ニックネームは必須です');
-  const data = { nickname, maker:$('cMaker').value, model:$('cModel').value, carType:$('cCarType').value,
-    year:$('cYear').value, plate:$('cPlate').value, vin:$('cVin').value,
-    fuelType:$('cFuelType').value, driveType:$('cDriveType').value,
-    odo:Number($('cOdo').value)||0, shaken:$('cShaken').value,
-    specs:{tireSize:$('cSpecTire').value, tirePressure:$('cSpecAir').value,
-      oilViscosity:$('cSpecOil').value, batteryModel:$('cSpecBattery').value, wiperSize:$('cSpecWiper').value},
-    updatedAt:serverTimestamp() };
-  const docId = $('carDocId').value;
-  if (docId) { await updateDoc(doc(db,`users/${currentUser.uid}/cars`,docId),data); }
-  else {
-    const snap = await getDocs(collection(db,`users/${currentUser.uid}/cars`));
-    if (snap.size>=5) return alert('登録できる車両は5台までです');
-    data.createdAt=serverTimestamp();
-    await addDoc(collection(db,`users/${currentUser.uid}/cars`),data);
+$('closeCarModal').addEventListener('click',()=>$('carModal').classList.remove('active'));
+$('saveCarBtn').addEventListener('click',async()=>{
+  const nickname=$('cNickname').value.trim(); if(!nickname) return alert('ニックネームは必須です');
+  const data={nickname,maker:$('cMaker').value,model:$('cModel').value,carType:$('cCarType').value,
+    year:$('cYear').value,plate:$('cPlate').value,vin:$('cVin').value,
+    fuelType:$('cFuelType').value,driveType:$('cDriveType').value,
+    odo:Number($('cOdo').value)||0,shaken:$('cShaken').value,
+    specs:{tireSize:$('cSpecTire').value,tirePressure:$('cSpecAir').value,
+      oilViscosity:$('cSpecOil').value,batteryModel:$('cSpecBattery').value,wiperSize:$('cSpecWiper').value},
+    updatedAt:serverTimestamp()};
+  const docId=$('carDocId').value;
+  if(docId){await updateDoc(doc(db,`users/${currentUser.uid}/cars`,docId),data);}
+  else{
+    const snap=await getDocs(collection(db,`users/${currentUser.uid}/cars`));
+    if(snap.size>=5) return alert('登録できる車両は5台までです');
+    data.createdAt=serverTimestamp(); await addDoc(collection(db,`users/${currentUser.uid}/cars`),data);
   }
   showToast('車両情報を保存しました'); $('carModal').classList.remove('active'); loadCars();
 });
 
-$('editInsBtn').addEventListener('click', () => {
-  if (!currentDetailCarData) return;
-  const ins = currentDetailCarData.insurance||{}; const jibai = currentDetailCarData.jibaiInsurance||{};
-  $('insCarDocId').value = currentDetailCarData.id;
+$('editInsBtn').addEventListener('click',()=>{
+  if(!currentDetailCarData) return;
+  const ins=currentDetailCarData.insurance||{},jibai=currentDetailCarData.jibaiInsurance||{};
+  $('insCarDocId').value=currentDetailCarData.id;
   $('iCompany').value=ins.company||''; $('iPolicy').value=ins.policyNo||''; $('iGrade').value=ins.grade||'';
-  $('iCondition').value=ins.condition||'';
-  $('iAnnualFee1').value=ins.annualFee1||''; $('iAnnualFee2').value=ins.annualFee2||''; $('iAnnualFee3').value=ins.annualFee3||'';
+  $('iCondition').value=ins.condition||''; $('iAnnualFee1').value=ins.annualFee1||''; $('iAnnualFee2').value=ins.annualFee2||''; $('iAnnualFee3').value=ins.annualFee3||'';
   updateFeeTotalDisplay();
   $('iStaff').value=ins.staffName||''; $('iTel').value=ins.staffTel||'';
   $('iAgency').value=ins.agencyName||''; $('iAgencyTel').value=ins.agencyTel||'';
@@ -1110,537 +1010,476 @@ $('editInsBtn').addEventListener('click', () => {
   $('jPolicy').value=jibai.policyNo||''; $('jStart').value=jibai.start||''; $('jExpiry').value=jibai.expiry||'';
   $('carDetailModal').classList.remove('active'); $('insModal').classList.add('active');
 });
-$('closeInsModal').addEventListener('click', () => $('insModal').classList.remove('active'));
-$('saveInsBtn').addEventListener('click', async () => {
-  const docId = $('insCarDocId').value; if (!docId) return;
-  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), {
-    insurance: {
-      company:$('iCompany').value, policyNo:$('iPolicy').value, grade:$('iGrade').value,
-      condition:$('iCondition').value,
-      annualFee1: Number($('iAnnualFee1').value)||0,
-      annualFee2: Number($('iAnnualFee2').value)||0,
-      annualFee3: Number($('iAnnualFee3').value)||0,
-      staffName:$('iStaff').value, staffTel:$('iTel').value,
-      agencyName:$('iAgency').value, agencyTel:$('iAgencyTel').value,
-      expiry:$('iExpiry').value, memo:$('iMemo').value
-    },
-    jibaiInsurance: { policyNo:$('jPolicy').value, start:$('jStart').value, expiry:$('jExpiry').value },
-    updatedAt: serverTimestamp()
+$('closeInsModal').addEventListener('click',()=>$('insModal').classList.remove('active'));
+$('saveInsBtn').addEventListener('click',async()=>{
+  const docId=$('insCarDocId').value; if(!docId) return;
+  await updateDoc(doc(db,`users/${currentUser.uid}/cars`,docId),{
+    insurance:{company:$('iCompany').value,policyNo:$('iPolicy').value,grade:$('iGrade').value,
+      condition:$('iCondition').value,annualFee1:Number($('iAnnualFee1').value)||0,
+      annualFee2:Number($('iAnnualFee2').value)||0,annualFee3:Number($('iAnnualFee3').value)||0,
+      staffName:$('iStaff').value,staffTel:$('iTel').value,agencyName:$('iAgency').value,
+      agencyTel:$('iAgencyTel').value,expiry:$('iExpiry').value,memo:$('iMemo').value},
+    jibaiInsurance:{policyNo:$('jPolicy').value,start:$('jStart').value,expiry:$('jExpiry').value},
+    updatedAt:serverTimestamp()
   });
   showToast('保険情報を保存しました'); $('insModal').classList.remove('active'); await loadCars();
 });
 
-$('editTireBtn').addEventListener('click', () => {
-  if (!currentDetailCarData) return;
-  const tire = currentDetailCarData.tire||{}; const ts = tire.summer||{}; const tw = tire.winter||{};
-  $('tireCarDocId').value = currentDetailCarData.id;
+$('editTireBtn').addEventListener('click',()=>{
+  if(!currentDetailCarData) return;
+  const tire=currentDetailCarData.tire||{},ts=tire.summer||{},tw=tire.winter||{};
+  $('tireCarDocId').value=currentDetailCarData.id;
   $('tsSze').value=ts.size||''; $('tsBrand').value=ts.brand||''; $('tsMade').value=ts.made||''; $('tsDate').value=ts.date||'';
   $('twSze').value=tw.size||''; $('twBrand').value=tw.brand||''; $('twMade').value=tw.made||''; $('twStorage').value=tw.storage||'';
   $('carDetailModal').classList.remove('active'); $('tireModal').classList.add('active');
 });
-$('closeTireModal').addEventListener('click', () => $('tireModal').classList.remove('active'));
-$('saveTireBtn').addEventListener('click', async () => {
-  const docId = $('tireCarDocId').value; if (!docId) return;
-  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, docId), {
-    tire: { summer:{size:$('tsSze').value,brand:$('tsBrand').value,made:$('tsMade').value,date:$('tsDate').value},
-            winter:{size:$('twSze').value,brand:$('twBrand').value,made:$('twMade').value,storage:$('twStorage').value} },
-    updatedAt: serverTimestamp()
+$('closeTireModal').addEventListener('click',()=>$('tireModal').classList.remove('active'));
+$('saveTireBtn').addEventListener('click',async()=>{
+  const docId=$('tireCarDocId').value; if(!docId) return;
+  await updateDoc(doc(db,`users/${currentUser.uid}/cars`,docId),{
+    tire:{summer:{size:$('tsSze').value,brand:$('tsBrand').value,made:$('tsMade').value,date:$('tsDate').value},
+          winter:{size:$('twSze').value,brand:$('twBrand').value,made:$('twMade').value,storage:$('twStorage').value}},
+    updatedAt:serverTimestamp()
   });
   showToast('タイヤ情報を保存しました'); $('tireModal').classList.remove('active'); await loadCars();
 });
 
 // ============================================================
+// 年間計画タブ（annualPlansコレクション＋車検・保険満了日の自動合成）
+// ============================================================
+$('addPlanBtn').addEventListener('click',()=>{
+  if(!currentDetailCarData) return;
+  $('planDocId').value=''; $('planCarDocId').value=currentDetailCarData.id;
+  $('planModalTitle').textContent='📅 計画イベントを追加';
+  $('pType').value='🔧 ボディメンテナンス'; $('pTitle').value=''; $('pDate').value=''; $('pRepeat').value='none'; $('pBudget').value=''; $('pMemo').value='';
+  $('carDetailModal').classList.remove('active'); $('planModal').classList.add('active');
+});
+$('closePlanModal').addEventListener('click',()=>{ $('planModal').classList.remove('active'); $('carDetailModal').classList.add('active'); });
+
+$('savePlanBtn').addEventListener('click',async()=>{
+  const carId=$('planCarDocId').value;
+  const pDate=$('pDate').value; if(!pDate) return alert('予定日を入力してください');
+  const data={
+    type:$('pType').value, title:$('pTitle').value.trim()||$('pType').value,
+    date:pDate, repeat:$('pRepeat').value,
+    budget:Number($('pBudget').value)||0, memo:$('pMemo').value.trim(),
+    updatedAt:serverTimestamp()
+  };
+  const docId=$('planDocId').value;
+  const colRef=collection(db,`users/${currentUser.uid}/cars/${carId}/annualPlans`);
+  if(docId){ await updateDoc(doc(colRef,docId),data); }
+  else{ data.createdAt=serverTimestamp(); await addDoc(colRef,data); }
+  showToast('計画を保存しました');
+  $('planModal').classList.remove('active'); $('carDetailModal').classList.add('active');
+  loadPlanTab(carId, currentDetailCarData);
+});
+
+// 年間計画タブの描画。手動登録した計画（Firestore保存）に加え、
+// 車両基本情報・保険タブにすでに登録されている車検・任意保険・自賠責の
+// 満了日を「自動プラン」として合成する。自動プランはFirestoreへの
+// 書き込みを一切行わない表示専用データであり、編集・削除ボタンも出さない。
+async function loadPlanTab(carId, carData) {
+  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/annualPlans`),orderBy('date','asc')));
+  const manualPlans=snap.docs.map(d=>({id:d.id,...d.data(),isAuto:false}));
+
+  const autoPlans=[];
+  if(carData?.shaken) autoPlans.push({id:'auto-shaken',title:'🔍 車検満了',date:carData.shaken,isAuto:true,memo:'車両基本情報より自動反映'});
+  if(carData?.insurance?.expiry) autoPlans.push({id:'auto-ins',title:'🛡️ 任意保険満了',date:carData.insurance.expiry,isAuto:true,memo:'保険情報より自動反映'});
+  if(carData?.jibaiInsurance?.expiry) autoPlans.push({id:'auto-jibai',title:'📄 自賠責満了',date:carData.jibaiInsurance.expiry,isAuto:true,memo:'保険情報より自動反映'});
+
+  const plans=[...manualPlans,...autoPlans];
+
+  const now=new Date();
+  const monthCounts=new Array(12).fill(0);
+  const monthKeys=[];
+  for(let i=0;i<12;i++){ const d=new Date(now.getFullYear(),now.getMonth()+i,1); monthKeys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`); }
+  plans.forEach(p=>{ if(!p.date) return; const idx=monthKeys.indexOf(p.date.slice(0,7)); if(idx!==-1) monthCounts[idx]++; });
+
+  const barEl=$('planMonthBar'), lblEl=$('planMonthLabels');
+  barEl.innerHTML=''; lblEl.innerHTML='';
+  monthKeys.forEach((mk,i)=>{
+    const count=monthCounts[i];
+    const month=parseInt(mk.slice(5),10);
+    const isThisMonth=(mk===`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`);
+    const cell=document.createElement('div'); cell.className='flex flex-col items-center gap-0.5 py-1 rounded';
+    if(isThisMonth) cell.classList.add('bg-white/20');
+    cell.innerHTML=count>0?Array.from({length:Math.min(count,3)},()=>`<span class="month-dot bg-teal-300"></span>`).join(''):'<span class="month-dot bg-white/20"></span>';
+    barEl.appendChild(cell);
+    const lbl=document.createElement('div'); lbl.textContent=`${month}月`;
+    if(isThisMonth) lbl.classList.add('text-white','font-bold');
+    lblEl.appendChild(lbl);
+  });
+
+  const today=new Date(); today.setHours(0,0,0,0);
+  const upcoming=plans.filter(p=>p.date&&new Date(p.date)>=today).sort((a,b)=>a.date.localeCompare(b.date));
+  const nextCardEl=$('planNextCard');
+  if(upcoming.length>0){
+    const next=upcoming[0];
+    const days=daysUntil(next.date);
+    const urgency=days<=7?'bg-red-50 border-red-200':days<=30?'bg-yellow-50 border-yellow-200':'bg-teal-50 border-teal-200';
+    const urgencyText=days===0?'今日！':days<0?`${Math.abs(days)}日超過`:`あと${days}日`;
+    nextCardEl.className=`${urgency} border p-4 rounded-2xl`;
+    nextCardEl.innerHTML=`
+      <p class="text-xs text-slate-400 mb-1">🔔 次回の予定${next.isAuto?'（🔗自動連携）':''}</p>
+      <p class="font-black text-lg">${next.title}</p>
+      <div class="flex items-center justify-between mt-1">
+        <p class="text-sm text-slate-500">${next.date}</p>
+        <span class="font-bold text-sm ${days<=7?'text-red-600':days<=30?'text-yellow-600':'text-teal-600'}">${urgencyText}</span>
+      </div>
+      ${next.memo?`<p class="text-xs text-slate-400 mt-1">📝 ${next.memo}</p>`:''}`;
+    nextCardEl.classList.remove('hidden');
+  } else { nextCardEl.classList.add('hidden'); }
+
+  const listEl=$('planList'); listEl.innerHTML='';
+  if(plans.length===0){ listEl.innerHTML='<p class="text-center text-slate-400 text-sm py-6">計画イベントがまだありません</p>'; return; }
+
+  const pastPlans=plans.filter(p=>p.date&&new Date(p.date)<today).sort((a,b)=>a.date.localeCompare(b.date));
+  const futurePlans=plans.filter(p=>p.date&&new Date(p.date)>=today).sort((a,b)=>a.date.localeCompare(b.date));
+
+  if(futurePlans.length>0){
+    const hdr=document.createElement('p'); hdr.className='text-xs font-bold text-slate-500 mt-2 mb-1'; hdr.textContent='📅 予定'; listEl.appendChild(hdr);
+    futurePlans.forEach(p=>listEl.appendChild(buildPlanCard(p,carId,false)));
+  }
+  if(pastPlans.length>0){
+    const hdr=document.createElement('p'); hdr.className='text-xs font-bold text-slate-400 mt-3 mb-1'; hdr.textContent='🕐 過去の計画'; listEl.appendChild(hdr);
+    pastPlans.slice().reverse().forEach(p=>listEl.appendChild(buildPlanCard(p,carId,true)));
+  }
+}
+
+function buildPlanCard(p, carId, isPast) {
+  const days=daysUntil(p.date);
+  const urgencyBg=isPast?'bg-slate-50 border-slate-100':days<=7?'bg-red-50 border-red-100':days<=30?'bg-yellow-50 border-yellow-100':'bg-white border-slate-100';
+  const repeatLabel={none:'','6month':'6ヶ月ごと','1year':'1年ごと','2year':'2年ごと'}[p.repeat||'none'];
+  const div=document.createElement('div');
+  div.className=`${urgencyBg} border rounded-2xl p-3 text-sm`;
+  const actionsHtml = p.isAuto
+    ? `<span class="text-xs text-slate-400 border border-slate-200 rounded px-2 py-0.5 whitespace-nowrap">🔗 自動連携</span>`
+    : `<div class="flex gap-1">
+         <button class="editPlanBtn text-blue-500 text-xs border border-blue-200 rounded px-2 py-0.5" data-id="${p.id}" data-car="${carId}">編集</button>
+         <button class="delPlanBtn text-red-500 text-xs border border-red-200 rounded px-2 py-0.5" data-id="${p.id}" data-car="${carId}">削除</button>
+       </div>`;
+  div.innerHTML=`
+    <div class="flex justify-between items-start">
+      <div class="flex-1">
+        <p class="font-bold ${isPast?'text-slate-400':''}">${p.title}</p>
+        <p class="text-xs text-slate-400 mt-0.5">${p.date}${repeatLabel?' ／ 🔁'+repeatLabel:''}</p>
+        ${p.budget>0?`<p class="text-xs text-slate-400">予算: ¥${p.budget.toLocaleString()}</p>`:''}
+        ${p.memo?`<p class="text-xs text-slate-400 mt-0.5">📝 ${p.memo}</p>`:''}
+      </div>
+      <div class="flex flex-col items-end gap-1 ml-2 flex-shrink-0">
+        ${!isPast&&days!==null?`<span class="text-xs font-bold ${days<=7?'text-red-600':days<=30?'text-yellow-600':'text-teal-600'}">${days===0?'今日！':days<0?`${Math.abs(days)}日超過`:`あと${days}日`}</span>`:''}
+        ${actionsHtml}
+      </div>
+    </div>`;
+  if(!p.isAuto){
+    div.querySelector('.editPlanBtn').addEventListener('click',()=>{
+      $('planDocId').value=p.id; $('planCarDocId').value=carId;
+      $('planModalTitle').textContent='📅 計画イベントを編集';
+      $('pType').value=p.type||'📝 その他'; $('pTitle').value=p.title||''; $('pDate').value=p.date||'';
+      $('pRepeat').value=p.repeat||'none'; $('pBudget').value=p.budget||''; $('pMemo').value=p.memo||'';
+      $('carDetailModal').classList.remove('active'); $('planModal').classList.add('active');
+    });
+    div.querySelector('.delPlanBtn').addEventListener('click',async()=>{
+      if(!confirm('この計画を削除しますか？')) return;
+      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/annualPlans`,p.id));
+      loadPlanTab(carId,currentDetailCarData);
+    });
+  }
+  return div;
+}
+
+// ============================================================
 // チケット管理
 // ============================================================
-$('addTicketBtn').addEventListener('click', () => {
-  if (!currentDetailCarData) return;
-  $('ticketCarDocId').value = currentDetailCarData.id;
-  document.querySelectorAll('#ticketModal input:not([type=hidden])').forEach(i => i.value = '');
-  $('tShopSelect').value = '';
-  $('tBuyDate').value = new Date().toISOString().slice(0,10);
+$('addTicketBtn').addEventListener('click',()=>{
+  if(!currentDetailCarData) return;
+  $('ticketCarDocId').value=currentDetailCarData.id;
+  document.querySelectorAll('#ticketModal input:not([type=hidden])').forEach(i=>i.value='');
+  $('tShopSelect').value=''; $('tBuyDate').value=new Date().toISOString().slice(0,10);
   $('carDetailModal').classList.remove('active'); $('ticketModal').classList.add('active');
 });
-$('closeTicketModal').addEventListener('click', () => { $('ticketModal').classList.remove('active'); $('carDetailModal').classList.add('active'); });
-$('saveTicketBtn').addEventListener('click', async () => {
-  const carId = $('ticketCarDocId').value;
-  const name = $('tName').value.trim();
-  const total = parseInt($('tTotal').value)||0;
-  if (!name || total <= 0) return alert('パック名と枚数(1以上)を入力してください');
-  const shop = $('tShopSelect').value || $('tShopFree').value.trim();
-  await addDoc(collection(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`), {
-    name, total, remaining: total, cost: Number($('tCost').value)||0,
-    buyDate: $('tBuyDate').value, expiry: $('tExpiry').value, shop, usageHistory: [], createdAt: serverTimestamp()
+$('closeTicketModal').addEventListener('click',()=>{ $('ticketModal').classList.remove('active'); $('carDetailModal').classList.add('active'); });
+$('saveTicketBtn').addEventListener('click',async()=>{
+  const carId=$('ticketCarDocId').value, name=$('tName').value.trim(), total=parseInt($('tTotal').value)||0;
+  if(!name||total<=0) return alert('パック名と枚数(1以上)を入力してください');
+  const shop=$('tShopSelect').value||$('tShopFree').value.trim();
+  await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`),{
+    name,total,remaining:total,cost:Number($('tCost').value)||0,
+    buyDate:$('tBuyDate').value,expiry:$('tExpiry').value,shop,usageHistory:[],createdAt:serverTimestamp()
   });
   showToast('チケットパックを登録しました');
   $('ticketModal').classList.remove('active'); $('carDetailModal').classList.add('active');
   loadTicketList(carId);
 });
 async function loadTicketList(carId) {
-  const snap = await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`), orderBy('createdAt','desc')));
-  const list = $('ticketList'); list.innerHTML='';
-  if (snap.empty) { list.innerHTML='<p class="text-center text-slate-400 text-sm py-6">チケットパックがまだありません</p>'; return; }
-  snap.forEach(d => {
-    const t = d.data();
-    const pct = t.total>0 ? Math.round((t.remaining/t.total)*100) : 0;
-    const isFinished = t.remaining<=0;
-    const barColor = isFinished ? 'bg-slate-300' : (t.remaining<=1 ? 'bg-yellow-500' : 'bg-purple-500');
-    const expBadge = t.expiry ? expiryBadge(daysUntil(t.expiry)) : null;
-    const historyHtml = (t.usageHistory||[]).slice().reverse().slice(0,5).map(h=>`<li class="text-xs text-slate-400">・${h.date}${h.memo?'　'+h.memo:''}</li>`).join('');
-    const div = document.createElement('div');
-    div.className = `bg-white border border-slate-100 rounded-2xl shadow-sm p-4 ${isFinished?'opacity-60':''}`;
-    div.innerHTML = `
-      <div class="flex justify-between items-start mb-2">
-        <div><p class="font-bold">${t.name}</p><p class="text-xs text-slate-400">${t.shop?t.shop+'／':''}${t.buyDate?'購入:'+t.buyDate:''}</p></div>
-        <span class="text-2xl">${isFinished?'🏁':'🎫'}</span>
-      </div>
-      <div class="flex items-center gap-3 mb-2">
-        <div class="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden"><div class="${barColor} h-3 rounded-full" style="width:${pct}%"></div></div>
-        <span class="font-black text-lg text-purple-700">${t.remaining}<span class="text-xs font-normal text-slate-400">/${t.total}枚</span></span>
-      </div>
+  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`),orderBy('createdAt','desc')));
+  const list=$('ticketList'); list.innerHTML='';
+  if(snap.empty){list.innerHTML='<p class="text-center text-slate-400 text-sm py-6">チケットパックがまだありません</p>'; return;}
+  snap.forEach(d=>{
+    const t=d.data(), pct=t.total>0?Math.round((t.remaining/t.total)*100):0, isFinished=t.remaining<=0;
+    const barColor=isFinished?'bg-slate-300':(t.remaining<=1?'bg-yellow-500':'bg-purple-500');
+    const expBadge=t.expiry?expiryBadge(daysUntil(t.expiry)):null;
+    const histHtml=(t.usageHistory||[]).slice().reverse().slice(0,5).map(h=>`<li class="text-xs text-slate-400">・${h.date}${h.memo?'　'+h.memo:''}</li>`).join('');
+    const div=document.createElement('div');
+    div.className=`bg-white border border-slate-100 rounded-2xl shadow-sm p-4 ${isFinished?'opacity-60':''}`;
+    div.innerHTML=`
+      <div class="flex justify-between items-start mb-2"><div><p class="font-bold">${t.name}</p><p class="text-xs text-slate-400">${t.shop?t.shop+'／':''}${t.buyDate?'購入:'+t.buyDate:''}</p></div><span class="text-2xl">${isFinished?'🏁':'🎫'}</span></div>
+      <div class="flex items-center gap-3 mb-2"><div class="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden"><div class="${barColor} h-3 rounded-full" style="width:${pct}%"></div></div><span class="font-black text-lg text-purple-700">${t.remaining}<span class="text-xs font-normal text-slate-400">/${t.total}枚</span></span></div>
       ${expBadge?`<span class="inline-block text-xs px-2 py-0.5 rounded-full ${expBadge.cls} mb-2">有効期限 ${t.expiry}（${expBadge.label}）</span>`:''}
-      ${historyHtml?`<ul class="mb-2">${historyHtml}</ul>`:''}
-      <div class="flex gap-2">
-        ${!isFinished?`<button class="useTicketBtn flex-1 bg-purple-600 text-white py-2 rounded-xl font-bold text-sm" data-id="${d.id}" data-name="${t.name}" data-rem="${t.remaining}" data-car="${carId}">🎟️ 1枚使用する</button>`:'<span class="flex-1 text-center text-slate-400 text-sm py-2">使い切りました</span>'}
-        <button class="delTicketBtn text-red-500 text-xs px-3 border border-red-200 rounded-xl" data-id="${d.id}" data-car="${carId}">削除</button>
-      </div>`;
+      ${histHtml?`<ul class="mb-2">${histHtml}</ul>`:''}
+      <div class="flex gap-2">${!isFinished?`<button class="useTicketBtn flex-1 bg-purple-600 text-white py-2 rounded-xl font-bold text-sm" data-id="${d.id}" data-name="${t.name}" data-rem="${t.remaining}" data-car="${carId}">🎟️ 1枚使用する</button>`:'<span class="flex-1 text-center text-slate-400 text-sm py-2">使い切りました</span>'}<button class="delTicketBtn text-red-500 text-xs px-3 border border-red-200 rounded-xl" data-id="${d.id}" data-car="${carId}">削除</button></div>`;
     list.appendChild(div);
   });
-  list.querySelectorAll('.useTicketBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const rem = parseInt(btn.dataset.rem,10); if (rem<=0) return;
-      if (!confirm(`「${btn.dataset.name}」を1枚使用しますか？\nメンテナンス履歴にも自動で記録されます。`)) return;
-      const memo = prompt('メモ（任意・空欄でOK）','')||'';
-      const today = new Date().toISOString().slice(0,10);
-      const carId = btn.dataset.car;
-      const newRemaining = rem-1;
-      await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,btn.dataset.id), { remaining:newRemaining, usageHistory:arrayUnion({date:today,memo}) });
-      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),{
-        status:'完了', category:'洗車・コーティング', completedDate:today, completedOdo:null,
-        actualCost:0, workDetail:`${btn.dataset.name}（チケット使用・残り${newRemaining}枚）`, doneNote:memo, createdAt:serverTimestamp()
-      });
-      showToast(`チケットを1枚使用しました（残り${newRemaining}枚）`);
-      loadTicketList(carId);
-      if (currentCarId===carId) loadMaint();
+  list.querySelectorAll('.useTicketBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const rem=parseInt(btn.dataset.rem,10); if(rem<=0) return;
+      if(!confirm(`「${btn.dataset.name}」を1枚使用しますか？`)) return;
+      const memo=prompt('メモ（任意）','')||'';
+      const today=new Date().toISOString().slice(0,10), carId=btn.dataset.car, newRem=rem-1;
+      await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,btn.dataset.id),{remaining:newRem,usageHistory:arrayUnion({date:today,memo})});
+      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),{status:'完了',category:'洗車・コーティング',completedDate:today,completedOdo:null,actualCost:0,workDetail:`${btn.dataset.name}（チケット使用・残り${newRem}枚）`,doneNote:memo,createdAt:serverTimestamp()});
+      showToast(`チケットを1枚使用しました（残り${newRem}枚）`);
+      loadTicketList(carId); if(currentCarId===carId) loadMaint();
     });
   });
-  list.querySelectorAll('.delTicketBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('このチケットパックを削除しますか？')) return;
-      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${btn.dataset.car}/ticketPacks`,btn.dataset.id));
-      loadTicketList(btn.dataset.car);
-    });
+  list.querySelectorAll('.delTicketBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{ if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${btn.dataset.car}/ticketPacks`,btn.dataset.id)); loadTicketList(btn.dataset.car); });
   });
 }
 
 // ============================================================
-// 分析タブ（Chart.js）
+// 分析タブ
 // ============================================================
 async function loadAnalysis(carId, carData) {
-  const [fuelSnap, maintSnap, ticketSnap] = await Promise.all([
-    getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/fuelLogs`), orderBy('date','asc'))),
-    getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/maintenanceLogs`), orderBy('createdAt','asc'))),
-    getDocs(query(collection(db, `users/${currentUser.uid}/cars/${carId}/ticketPacks`), orderBy('createdAt','asc')))
+  const [fuelSnap,maintSnap,ticketSnap]=await Promise.all([
+    getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/fuelLogs`),orderBy('date','asc'))),
+    getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),orderBy('createdAt','asc'))),
+    getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`),orderBy('createdAt','asc')))
   ]);
-  const now = new Date();
-  const oneYearAgo = new Date(now.getFullYear()-1, now.getMonth(), now.getDate());
-  const monthLabels = [];
-  for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); monthLabels.push(`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`); }
-  const monthlyFuel = new Array(12).fill(0), monthlyMaint = new Array(12).fill(0), monthlyTicket = new Array(12).fill(0);
-  let totalFuel = 0, totalMaint = 0, totalTicket = 0;
-
-  fuelSnap.forEach(d => {
-    const f = d.data(); if (!f.date || !f.amount) return;
-    const fDate = new Date(f.date);
-    if (fDate >= oneYearAgo) {
-      totalFuel += f.amount;
-      const label = `${fDate.getFullYear()}/${String(fDate.getMonth()+1).padStart(2,'0')}`;
-      const idx = monthLabels.indexOf(label); if (idx !== -1) monthlyFuel[idx] += f.amount;
-    }
-  });
-  maintSnap.forEach(d => {
-    const m = d.data(); if (m.status !== '完了' || !m.completedDate || !m.actualCost) return;
-    const mDate = new Date(m.completedDate);
-    if (mDate >= oneYearAgo) {
-      totalMaint += m.actualCost;
-      const label = `${mDate.getFullYear()}/${String(mDate.getMonth()+1).padStart(2,'0')}`;
-      const idx = monthLabels.indexOf(label); if (idx !== -1) monthlyMaint[idx] += m.actualCost;
-    }
-  });
-  ticketSnap.forEach(d => {
-    const t = d.data(); if (!t.buyDate || !t.cost) return;
-    const tDate = new Date(t.buyDate);
-    if (tDate >= oneYearAgo) {
-      totalTicket += t.cost;
-      const label = `${tDate.getFullYear()}/${String(tDate.getMonth()+1).padStart(2,'0')}`;
-      const idx = monthLabels.indexOf(label); if (idx !== -1) monthlyTicket[idx] += t.cost;
-    }
-  });
-
-  const ins = carData.insurance || {};
-  const f1 = Number(ins.annualFee1)||0, f2 = Number(ins.annualFee2)||0, f3 = Number(ins.annualFee3)||0;
-  const fTotal = f1 + f2 + f3;
-  const annualInsurance = fTotal > 0 ? Math.round(fTotal / 3) : (Number(ins.annualFee)||0);
-  const totalAll = totalFuel + totalMaint + totalTicket + annualInsurance;
-
-  $('analysisSummaryCards').innerHTML = `
-    <div class="col-span-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-2xl shadow">
-      <p class="text-blue-200 text-xs mb-1">💰 直近1年間の維持費合計</p>
-      <p class="text-3xl font-black">¥${totalAll.toLocaleString()}</p>
-      ${annualInsurance>0?`<p class="text-blue-200 text-xs mt-1">保険料は3年合計÷3で年換算（¥${annualInsurance.toLocaleString()}/年）</p>`:''}
-    </div>
-    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100"><p class="text-xs text-slate-400">⛽ 給油費</p><p class="font-black text-blue-700 text-lg">¥${totalFuel.toLocaleString()}</p></div>
-    <div class="bg-green-50 p-3 rounded-xl border border-green-100"><p class="text-xs text-slate-400">🔧 メンテ費</p><p class="font-black text-green-700 text-lg">¥${totalMaint.toLocaleString()}</p></div>
-    <div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><p class="text-xs text-slate-400">🎫 チケット</p><p class="font-black text-purple-700 text-lg">¥${totalTicket.toLocaleString()}</p></div>
-    <div class="bg-orange-50 p-3 rounded-xl border border-orange-100"><p class="text-xs text-slate-400">🛡️ 保険料(年換算)</p><p class="font-black text-orange-700 text-lg">¥${annualInsurance.toLocaleString()}</p></div>`;
-
-  if (chartMonthly) { chartMonthly.destroy(); chartMonthly = null; }
-  chartMonthly = new Chart($('monthlyChart'), {
-    type: 'bar',
-    data: { labels: monthLabels.map(l => l.slice(5)), datasets: [
-      { label:'給油', data: monthlyFuel, backgroundColor:'rgba(59,130,246,0.8)', stack:'cost' },
-      { label:'メンテ', data: monthlyMaint, backgroundColor:'rgba(34,197,94,0.8)', stack:'cost' },
-      { label:'チケット', data: monthlyTicket, backgroundColor:'rgba(168,85,247,0.8)', stack:'cost' }
-    ]},
-    options: { responsive: true, maintainAspectRatio: true,
-      plugins: { legend:{ position:'bottom', labels:{ font:{size:10}, boxWidth:12 } } },
-      scales: { x: { stacked:true, ticks:{ font:{size:9} } }, y: { stacked:true, ticks:{ font:{size:9}, callback: v => `¥${(v/1000).toFixed(0)}k` } } } }
-  });
-
-  if (chartDonut) { chartDonut.destroy(); chartDonut = null; }
-  const donutData = [totalFuel, totalMaint, totalTicket, annualInsurance];
-  const donutLabels = ['給油','メンテ','チケット','保険料'];
-  const donutColors = ['rgba(59,130,246,0.85)','rgba(34,197,94,0.85)','rgba(168,85,247,0.85)','rgba(251,146,60,0.85)'];
-  chartDonut = new Chart($('donutChart'), {
-    type: 'doughnut',
-    data: { labels: donutLabels, datasets: [{ data: donutData, backgroundColor: donutColors, borderWidth:2 }] },
-    options: { responsive: true, maintainAspectRatio: true, plugins: { legend:{ display:false } }, cutout: '65%' }
-  });
-  const legendEl = $('donutLegend');
-  legendEl.innerHTML = donutLabels.map((label, i) => {
-    const pct = totalAll > 0 ? Math.round((donutData[i]/totalAll)*100) : 0;
-    return `<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${donutColors[i]}"></span><span>${label}</span><span class="ml-auto font-bold">¥${donutData[i].toLocaleString()}</span><span class="text-slate-400">${pct}%</span></div>`;
-  }).join('');
-
-  if (chartEfficiency) { chartEfficiency.destroy(); chartEfficiency = null; }
-  const effData = [];
-  fuelSnap.forEach(d => { const f=d.data(); if(f.efficiency) effData.push({ date:f.date, eff:f.efficiency }); });
-  const recent20 = effData.slice(-20);
-  chartEfficiency = new Chart($('efficiencyChart'), {
-    type: 'line',
-    data: { labels: recent20.map(e => e.date.slice(5)), datasets: [{ label: '燃費(km/L)', data: recent20.map(e => e.eff),
-      borderColor:'rgba(59,130,246,1)', backgroundColor:'rgba(59,130,246,0.1)', tension:0.3, fill:true, pointRadius:4, pointBackgroundColor:'rgba(59,130,246,1)' }] },
-    options: { responsive: true, maintainAspectRatio: true, plugins: { legend:{ display:false } },
-      scales: { x: { ticks:{ font:{size:9} } }, y: { ticks:{ font:{size:9}, callback: v => `${v}km/L` }, beginAtZero:false } } }
-  });
+  const now=new Date(), oneYearAgo=new Date(now.getFullYear()-1,now.getMonth(),now.getDate());
+  const monthLabels=[];
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1); monthLabels.push(`${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}`);}
+  const mF=new Array(12).fill(0),mM=new Array(12).fill(0),mT=new Array(12).fill(0);
+  let tF=0,tM=0,tT=0;
+  fuelSnap.forEach(d=>{const f=d.data(); if(!f.date||!f.amount) return; const fd=new Date(f.date); if(fd>=oneYearAgo){tF+=f.amount; const l=`${fd.getFullYear()}/${String(fd.getMonth()+1).padStart(2,'0')}`; const i=monthLabels.indexOf(l); if(i!==-1) mF[i]+=f.amount;}});
+  maintSnap.forEach(d=>{const m=d.data(); if(m.status!=='完了'||!m.completedDate||!m.actualCost) return; const md=new Date(m.completedDate); if(md>=oneYearAgo){tM+=m.actualCost; const l=`${md.getFullYear()}/${String(md.getMonth()+1).padStart(2,'0')}`; const i=monthLabels.indexOf(l); if(i!==-1) mM[i]+=m.actualCost;}});
+  ticketSnap.forEach(d=>{const t=d.data(); if(!t.buyDate||!t.cost) return; const td=new Date(t.buyDate); if(td>=oneYearAgo){tT+=t.cost; const l=`${td.getFullYear()}/${String(td.getMonth()+1).padStart(2,'0')}`; const i=monthLabels.indexOf(l); if(i!==-1) mT[i]+=t.cost;}});
+  const ins=carData.insurance||{};
+  const f1=Number(ins.annualFee1)||0,f2=Number(ins.annualFee2)||0,f3=Number(ins.annualFee3)||0,ft=f1+f2+f3;
+  const annualIns=ft>0?Math.round(ft/3):(Number(ins.annualFee)||0);
+  const totalAll=tF+tM+tT+annualIns;
+  $('analysisSummaryCards').innerHTML=`
+    <div class="col-span-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-2xl shadow"><p class="text-blue-200 text-xs mb-1">💰 直近1年間の維持費合計</p><p class="text-3xl font-black">¥${totalAll.toLocaleString()}</p>${annualIns>0?`<p class="text-blue-200 text-xs mt-1">保険料は3年合計÷3で年換算（¥${annualIns.toLocaleString()}/年）</p>`:''}</div>
+    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100"><p class="text-xs text-slate-400">⛽ 給油費</p><p class="font-black text-blue-700 text-lg">¥${tF.toLocaleString()}</p></div>
+    <div class="bg-green-50 p-3 rounded-xl border border-green-100"><p class="text-xs text-slate-400">🔧 メンテ費</p><p class="font-black text-green-700 text-lg">¥${tM.toLocaleString()}</p></div>
+    <div class="bg-purple-50 p-3 rounded-xl border border-purple-100"><p class="text-xs text-slate-400">🎫 チケット</p><p class="font-black text-purple-700 text-lg">¥${tT.toLocaleString()}</p></div>
+    <div class="bg-orange-50 p-3 rounded-xl border border-orange-100"><p class="text-xs text-slate-400">🛡️ 保険料(年換算)</p><p class="font-black text-orange-700 text-lg">¥${annualIns.toLocaleString()}</p></div>`;
+  if(chartMonthly){chartMonthly.destroy();chartMonthly=null;}
+  chartMonthly=new Chart($('monthlyChart'),{type:'bar',data:{labels:monthLabels.map(l=>l.slice(5)),datasets:[{label:'給油',data:mF,backgroundColor:'rgba(59,130,246,0.8)',stack:'cost'},{label:'メンテ',data:mM,backgroundColor:'rgba(34,197,94,0.8)',stack:'cost'},{label:'チケット',data:mT,backgroundColor:'rgba(168,85,247,0.8)',stack:'cost'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{position:'bottom',labels:{font:{size:10},boxWidth:12}}},scales:{x:{stacked:true,ticks:{font:{size:9}}},y:{stacked:true,ticks:{font:{size:9},callback:v=>`¥${(v/1000).toFixed(0)}k`}}}}});
+  if(chartDonut){chartDonut.destroy();chartDonut=null;}
+  const dd=[tF,tM,tT,annualIns],dl=['給油','メンテ','チケット','保険料'],dc=['rgba(59,130,246,0.85)','rgba(34,197,94,0.85)','rgba(168,85,247,0.85)','rgba(251,146,60,0.85)'];
+  chartDonut=new Chart($('donutChart'),{type:'doughnut',data:{labels:dl,datasets:[{data:dd,backgroundColor:dc,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},cutout:'65%'}});
+  $('donutLegend').innerHTML=dl.map((l,i)=>{const pct=totalAll>0?Math.round((dd[i]/totalAll)*100):0; return `<div class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full flex-shrink-0" style="background:${dc[i]}"></span><span>${l}</span><span class="ml-auto font-bold">¥${dd[i].toLocaleString()}</span><span class="text-slate-400">${pct}%</span></div>`;}).join('');
+  if(chartEfficiency){chartEfficiency.destroy();chartEfficiency=null;}
+  const effData=[]; fuelSnap.forEach(d=>{const f=d.data(); if(f.efficiency) effData.push({date:f.date,eff:f.efficiency});});
+  const r20=effData.slice(-20);
+  chartEfficiency=new Chart($('efficiencyChart'),{type:'line',data:{labels:r20.map(e=>e.date.slice(5)),datasets:[{label:'燃費(km/L)',data:r20.map(e=>e.eff),borderColor:'rgba(59,130,246,1)',backgroundColor:'rgba(59,130,246,0.1)',tension:0.3,fill:true,pointRadius:4,pointBackgroundColor:'rgba(59,130,246,1)'}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:9}}},y:{ticks:{font:{size:9},callback:v=>`${v}km/L`},beginAtZero:false}}}});
 }
 
 // ============================================================
 // 車両管理
 // ============================================================
-$('addCarBtn').addEventListener('click', () => {
+$('addCarBtn').addEventListener('click',()=>{
   $('carDocId').value=''; $('carModalTitle').textContent='車両情報を登録';
-  document.querySelectorAll('#carModal input:not([type=hidden]), #carModal select').forEach(i=>i.value='');
+  document.querySelectorAll('#carModal input:not([type=hidden]),#carModal select').forEach(i=>i.value='');
   $('carModal').classList.add('active');
 });
-
 async function loadCars() {
-  const snap = await getDocs(collection(db,`users/${currentUser.uid}/cars`));
-  const list=$('carList'); list.innerHTML='';
-  $('globalCarSelect').innerHTML='';
-  $('addCarBtn').disabled=snap.size>=5;
-  $('addCarBtn').classList.toggle('opacity-40',snap.size>=5);
-  snap.forEach(d => {
+  const snap=await getDocs(collection(db,`users/${currentUser.uid}/cars`));
+  const list=$('carList'); list.innerHTML=''; $('globalCarSelect').innerHTML='';
+  $('addCarBtn').disabled=snap.size>=5; $('addCarBtn').classList.toggle('opacity-40',snap.size>=5);
+  snap.forEach(d=>{
     const c=d.data();
-    const opt=document.createElement('option'); opt.value=d.id; opt.textContent=c.nickname;
-    $('globalCarSelect').appendChild(opt);
-    const shakenBadge=expiryBadge(daysUntil(c.shaken));
-    const insBadge=expiryBadge(daysUntil(c.insurance?.expiry));
-    const jibaiBadge=expiryBadge(daysUntil(c.jibaiInsurance?.expiry));
-    const div=document.createElement('div');
-    div.className='bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
-    div.innerHTML=`
-      <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3">
-        <h3 class="font-bold text-lg">${c.nickname}</h3>
-        <p class="text-blue-200 text-xs">${c.maker||''} ${c.model||''} ${c.year?'('+c.year+')':''}</p>
-      </div>
-      <div class="p-4 space-y-2">
-        <div class="flex justify-between items-center text-sm"><span class="text-slate-500">走行距離</span><span class="font-bold text-blue-700">${(c.odo||0).toLocaleString()} km</span></div>
-        <div class="flex flex-wrap gap-1">
-          <span class="text-xs px-2 py-0.5 rounded-full ${shakenBadge.cls}">車検 ${shakenBadge.label}</span>
-          <span class="text-xs px-2 py-0.5 rounded-full ${insBadge.cls}">任意保険 ${insBadge.label}</span>
-          <span class="text-xs px-2 py-0.5 rounded-full ${jibaiBadge.cls}">自賠責 ${jibaiBadge.label}</span>
-        </div>
-        <div class="flex justify-between items-center pt-1"><span class="text-xs text-slate-400">${c.plate||'ナンバー未登録'}</span><span class="text-blue-600 text-xs font-bold">詳細を見る →</span></div>
-      </div>`;
+    const opt=document.createElement('option'); opt.value=d.id; opt.textContent=c.nickname; $('globalCarSelect').appendChild(opt);
+    const sb=expiryBadge(daysUntil(c.shaken)),ib=expiryBadge(daysUntil(c.insurance?.expiry)),jb=expiryBadge(daysUntil(c.jibaiInsurance?.expiry));
+    const div=document.createElement('div'); div.className='bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
+    div.innerHTML=`<div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3"><h3 class="font-bold text-lg">${c.nickname}</h3><p class="text-blue-200 text-xs">${c.maker||''} ${c.model||''} ${c.year?'('+c.year+')':''}</p></div><div class="p-4 space-y-2"><div class="flex justify-between items-center text-sm"><span class="text-slate-500">走行距離</span><span class="font-bold text-blue-700">${(c.odo||0).toLocaleString()} km</span></div><div class="flex flex-wrap gap-1"><span class="text-xs px-2 py-0.5 rounded-full ${sb.cls}">車検 ${sb.label}</span><span class="text-xs px-2 py-0.5 rounded-full ${ib.cls}">任意保険 ${ib.label}</span><span class="text-xs px-2 py-0.5 rounded-full ${jb.cls}">自賠責 ${jb.label}</span></div><div class="flex justify-between items-center pt-1"><span class="text-xs text-slate-400">${c.plate||'ナンバー未登録'}</span><span class="text-blue-600 text-xs font-bold">詳細を見る →</span></div></div>`;
     div.addEventListener('click',()=>openDetailModal(d.id,c));
     list.appendChild(div);
   });
-  if ($('globalCarSelect').value) { currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); }
+  if($('globalCarSelect').value){currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint();}
 }
-$('globalCarSelect').addEventListener('change',()=>{ currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint(); });
+$('globalCarSelect').addEventListener('change',()=>{currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint();});
 
 // ============================================================
-// レシートOCR（給油店舗マスタを優先照合）
+// レシートOCR
 // ============================================================
 async function scanReceipt(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = async () => {
-        try {
-          const canvas = document.createElement('canvas');
-          const scale = Math.min(1200 / img.width, 1);
-          canvas.width = img.width * scale; canvas.height = img.height * scale;
-          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-          const { data: { text } } = await Tesseract.recognize(canvas.toDataURL('image/jpeg', 0.85), 'jpn+eng');
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=async()=>{
+        try{
+          const canvas=document.createElement('canvas'), scale=Math.min(1200/img.width,1);
+          canvas.width=img.width*scale; canvas.height=img.height*scale;
+          canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+          const{data:{text}}=await Tesseract.recognize(canvas.toDataURL('image/jpeg',0.85),'jpn+eng');
           resolve(text);
-        } catch (err) { reject(err); }
+        }catch(err){reject(err);}
       };
-      img.onerror = reject; img.src = e.target.result;
+      img.onerror=reject; img.src=e.target.result;
     };
-    reader.onerror = reject; reader.readAsDataURL(file);
+    reader.onerror=reject; reader.readAsDataURL(file);
   });
 }
-// 給油店舗名の推測：①給油店舗マスタとの部分一致 → ②主要ブランドのキーワード検出
 function guessFuelShopName(text) {
-  const upper = text.toUpperCase();
-  for (const shop of cachedFuelShops) {
-    if (shop.name && upper.includes(shop.name.toUpperCase())) return shop.name;
-  }
-  const brands = [
-    { kw: ['ENEOS','エネオス'], label: 'ENEOS' },
-    { kw: ['出光','IDEMITSU','APOLLOSTATION','アポロ'], label: '出光' },
-    { kw: ['コスモ','COSMO'], label: 'コスモ石油' },
-    { kw: ['昭和シェル','シェル','SHELL'], label: '昭和シェル' },
-    { kw: ['エッソ','ESSO','モービル','MOBIL'], label: 'エッソ/モービル' },
-    { kw: ['キグナス','KYGNUS'], label: 'キグナス石油' },
-  ];
-  for (const brand of brands) { if (brand.kw.some(kw => upper.includes(kw.toUpperCase()))) return brand.label; }
+  const upper=text.toUpperCase();
+  for(const s of cachedFuelShops){if(s.name&&upper.includes(s.name.toUpperCase())) return s.name;}
+  const brands=[{kw:['ENEOS','エネオス'],l:'ENEOS'},{kw:['出光','IDEMITSU','APOLLOSTATION','アポロ'],l:'出光'},{kw:['コスモ','COSMO'],l:'コスモ石油'},{kw:['シェル','SHELL'],l:'昭和シェル'},{kw:['エッソ','ESSO','モービル','MOBIL'],l:'エッソ/モービル'},{kw:['キグナス','KYGNUS'],l:'キグナス石油'}];
+  for(const b of brands){if(b.kw.some(kw=>upper.includes(kw.toUpperCase()))) return b.l;}
   return '';
 }
 function parseReceiptText(text) {
-  const result = {};
-  const dateMatch = text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
-  if (dateMatch) result.date = `${dateMatch[1]}-${dateMatch[2].padStart(2,'0')}-${dateMatch[3].padStart(2,'0')}`;
-  const litersMatch = text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/);
-  if (litersMatch) result.liters = parseFloat(litersMatch[1]);
-  let amountMatch = text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
-  if (!amountMatch) amountMatch = text.match(/[¥￥]\s*([\d,]{3,7})/);
-  if (amountMatch) result.amount = parseInt(amountMatch[1].replace(/,/g,''), 10);
-  const shop = guessFuelShopName(text);
-  if (shop) result.shop = shop;
-  return result;
+  const r={};
+  const dm=text.match(/(\d{4})[\/\-年]\s*(\d{1,2})[\/\-月]\s*(\d{1,2})/);
+  if(dm) r.date=`${dm[1]}-${dm[2].padStart(2,'0')}-${dm[3].padStart(2,'0')}`;
+  const lm=text.match(/(\d{1,3}\.\d{1,2})\s*[LlℓＬ]/); if(lm) r.liters=parseFloat(lm[1]);
+  let am=text.match(/(?:合計|請求|お買上|お買い上げ|小計)[^\d]{0,6}([\d,]{3,7})/);
+  if(!am) am=text.match(/[¥￥]\s*([\d,]{3,7})/); if(am) r.amount=parseInt(am[1].replace(/,/g,''),10);
+  const shop=guessFuelShopName(text); if(shop) r.shop=shop;
+  return r;
 }
 function updateUnitPriceDisplay() {
-  const liters = parseFloat($('fLiters').value);
-  const price = parseFloat($('fPrice').value);
-  $('fUnitPriceDisplay').textContent = (liters > 0 && price > 0) ? `${Math.round(price / liters)} 円/L` : '- 円/L';
+  const l=parseFloat($('fLiters').value),p=parseFloat($('fPrice').value);
+  $('fUnitPriceDisplay').textContent=(l>0&&p>0)?`${Math.round(p/l)} 円/L`:'- 円/L';
 }
-$('fLiters').addEventListener('input', updateUnitPriceDisplay);
-$('fPrice').addEventListener('input', updateUnitPriceDisplay);
-
-$('scanReceiptBtn').addEventListener('click', () => $('fReceiptScan').click());
-$('fReceiptScan').addEventListener('change', async e => {
-  const file = e.target.files[0]; if (!file) return;
-  const statusEl = $('scanStatus');
-  statusEl.textContent = '🔍 読み取り中…（10〜20秒ほどかかります）';
-  statusEl.classList.remove('hidden'); $('scanReceiptBtn').disabled = true;
-  try {
-    const parsed = parseReceiptText(await scanReceipt(file));
-    if (parsed.date) $('fDate').value = parsed.date;
-    if (parsed.liters) $('fLiters').value = parsed.liters;
-    if (parsed.amount) $('fPrice').value = parsed.amount;
-    // 給油店舗マスタに一致すればプルダウンへ、一致しなければ自由入力欄へ
-    if (parsed.shop) {
-      const matched = cachedFuelShops.find(s => s.name === parsed.shop);
-      if (matched) { $('fShopSelect').value = parsed.shop; $('fShopFree').value = ''; }
-      else { $('fShopSelect').value = ''; $('fShopFree').value = parsed.shop; }
-    }
+$('fLiters').addEventListener('input',updateUnitPriceDisplay);
+$('fPrice').addEventListener('input',updateUnitPriceDisplay);
+$('scanReceiptBtn').addEventListener('click',()=>$('fReceiptScan').click());
+$('fReceiptScan').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const st=$('scanStatus');
+  st.textContent='🔍 読み取り中…（10〜20秒ほどかかります）'; st.classList.remove('hidden'); $('scanReceiptBtn').disabled=true;
+  try{
+    const parsed=parseReceiptText(await scanReceipt(file));
+    if(parsed.date) $('fDate').value=parsed.date;
+    if(parsed.liters) $('fLiters').value=parsed.liters;
+    if(parsed.amount) $('fPrice').value=parsed.amount;
+    if(parsed.shop){const m=cachedFuelShops.find(s=>s.name===parsed.shop); if(m){$('fShopSelect').value=parsed.shop;$('fShopFree').value='';}else{$('fShopSelect').value='';$('fShopFree').value=parsed.shop;}}
     updateUnitPriceDisplay();
-    const detected = parsed.date || parsed.liters || parsed.amount || parsed.shop;
-    statusEl.textContent = detected
-      ? `✅ 読み取り完了${parsed.shop ? '（店舗: ' + parsed.shop + '）' : ''}。内容を確認・修正してから記録追加してください`
-      : '⚠️ うまく読み取れませんでした。手動で入力してください';
-  } catch (err) {
-    statusEl.textContent = '❌ 読み取りに失敗しました。手動で入力してください';
-  } finally {
-    $('scanReceiptBtn').disabled = false; e.target.value = '';
-  }
+    st.textContent=(parsed.date||parsed.liters||parsed.amount||parsed.shop)?`✅ 読み取り完了${parsed.shop?'（店舗: '+parsed.shop+'）':''}。内容を確認・修正してから記録追加してください`:'⚠️ うまく読み取れませんでした。手動で入力してください';
+  }catch{st.textContent='❌ 読み取りに失敗しました。手動で入力してください';}
+  finally{$('scanReceiptBtn').disabled=false; e.target.value='';}
 });
 
 // ============================================================
 // 給油記録
 // ============================================================
-$('saveFuelBtn').addEventListener('click', async () => {
-  if (!currentCarId) return alert('先に車両を選択してください');
-  const date = $('fDate').value;
-  const odo = Number($('fOdo').value);
-  const liters = Number($('fLiters').value);
-  const price = Number($('fPrice').value);
-  const isFull = $('fFull').checked;
-  const shop = $('fShopSelect').value || $('fShopFree').value.trim();
-  if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
-  const unitPrice = (liters > 0 && price > 0) ? Math.round(price / liters) : null;
-  const prevSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer','desc')));
-  let efficiency = null;
-  if (!prevSnap.empty) {
-    const prev = prevSnap.docs[0].data();
-    if (isFull && prev.fullTank && odo > prev.odometer) efficiency = Math.round(((odo - prev.odometer) / liters) * 10) / 10;
-  }
-  await addDoc(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), {
-    date, odometer: odo, liters, amount: price, unitPrice, shop, fullTank: isFull, efficiency, createdAt: serverTimestamp()
-  });
-  await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
+$('saveFuelBtn').addEventListener('click',async()=>{
+  if(!currentCarId) return alert('先に車両を選択してください');
+  const date=$('fDate').value,odo=Number($('fOdo').value),liters=Number($('fLiters').value),price=Number($('fPrice').value),isFull=$('fFull').checked;
+  const shop=$('fShopSelect').value||$('fShopFree').value.trim();
+  if(!date||!odo||!liters) return alert('日付・走行距離・給油量は必須です');
+  const unitPrice=(liters>0&&price>0)?Math.round(price/liters):null;
+  const prevSnap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('odometer','desc')));
+  let efficiency=null;
+  if(!prevSnap.empty){const prev=prevSnap.docs[0].data(); if(isFull&&prev.fullTank&&odo>prev.odometer) efficiency=Math.round(((odo-prev.odometer)/liters)*10)/10;}
+  await addDoc(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),{date,odometer:odo,liters,amount:price,unitPrice,shop,fullTank:isFull,efficiency,createdAt:serverTimestamp()});
+  await updateDoc(doc(db,`users/${currentUser.uid}/cars`,currentCarId),{odo});
   $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
-  $('fShopSelect').value=''; $('fShopFree').value=''; $('fUnitPriceDisplay').textContent = '- 円/L';
+  $('fShopSelect').value=''; $('fShopFree').value=''; $('fUnitPriceDisplay').textContent='- 円/L';
   $('scanStatus').classList.add('hidden');
   showToast('給油記録を追加しました'); loadFuel(); loadCars();
 });
-
 async function loadFuel() {
-  if (!currentCarId) return;
-  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('date','desc')));
-  const list = $('fuelList'); list.innerHTML = '';
-  if (snap.empty) { $('fuelSummary').classList.add('hidden'); list.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>'; return; }
-  const effs = [];
-  snap.forEach(d => { const f = d.data(); if (f.efficiency) effs.push(f.efficiency); });
-  if (effs.length) {
-    $('fuelSummary').classList.remove('hidden');
-    $('fuel-avg').textContent = (effs.reduce((a,b)=>a+b,0)/effs.length).toFixed(1);
-    $('fuel-latest').textContent = effs[0]; $('fuel-best').textContent = Math.max(...effs); $('fuel-worst').textContent = Math.min(...effs);
-  } else { $('fuelSummary').classList.add('hidden'); }
-  snap.forEach(d => {
-    const f = d.data();
-    const up = f.unitPrice ?? (f.amount && f.liters ? Math.round(f.amount / f.liters) : null);
-    const unitPriceText = up ? `<span class="text-xs text-slate-500 font-bold">@¥${up}/L</span>` : '';
-    const shopText = f.shop ? `<span class="text-xs text-slate-400">⛽ ${f.shop}</span>` : '';
-    const effBadge = f.efficiency ? `<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>` : `<span class="text-xs text-slate-400">${f.fullTank ? '算出不可' : '部分給油'}</span>`;
-    const div = document.createElement('div');
-    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm';
-    div.innerHTML = `
-      <div class="flex justify-between items-start">
-        <div>
-          <p class="font-bold">${f.date}${f.fullTank ? ' <span class="text-xs text-slate-400 font-normal">満タン</span>' : ''}</p>
-          <p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${(f.amount||0).toLocaleString()}</p>
-          <div class="flex items-center gap-2 mt-0.5">${unitPriceText}${shopText}</div>
-        </div>
-        <div class="flex items-center gap-2 flex-shrink-0">${effBadge}<button class="delFuelBtn text-red-400 text-xl leading-none ml-1" data-id="${d.id}">×</button></div>
-      </div>`;
+  if(!currentCarId) return;
+  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('date','desc')));
+  const list=$('fuelList'); list.innerHTML='';
+  if(snap.empty){$('fuelSummary').classList.add('hidden'); list.innerHTML='<p class="text-center text-slate-400 text-sm py-6">給油記録がまだありません</p>'; return;}
+  const effs=[]; snap.forEach(d=>{const f=d.data(); if(f.efficiency) effs.push(f.efficiency);});
+  if(effs.length){$('fuelSummary').classList.remove('hidden'); $('fuel-avg').textContent=(effs.reduce((a,b)=>a+b,0)/effs.length).toFixed(1); $('fuel-latest').textContent=effs[0]; $('fuel-best').textContent=Math.max(...effs); $('fuel-worst').textContent=Math.min(...effs);}
+  else $('fuelSummary').classList.add('hidden');
+  snap.forEach(d=>{
+    const f=d.data();
+    const up=f.unitPrice??(f.amount&&f.liters?Math.round(f.amount/f.liters):null);
+    const upt=up?`<span class="text-xs text-slate-500 font-bold">@¥${up}/L</span>`:'';
+    const st=f.shop?`<span class="text-xs text-slate-400">⛽ ${f.shop}</span>`:'';
+    const eb=f.efficiency?`<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>`:`<span class="text-xs text-slate-400">${f.fullTank?'算出不可':'部分給油'}</span>`;
+    const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm';
+    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${f.date}${f.fullTank?' <span class="text-xs text-slate-400 font-normal">満タン</span>':''}</p><p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${(f.amount||0).toLocaleString()}</p><div class="flex items-center gap-2 mt-0.5">${upt}${st}</div></div><div class="flex items-center gap-2 flex-shrink-0">${eb}<button class="delFuelBtn text-red-400 text-xl leading-none ml-1" data-id="${d.id}">×</button></div></div>`;
     list.appendChild(div);
   });
-  list.querySelectorAll('.delFuelBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
-      loadFuel();
-    });
-  });
+  list.querySelectorAll('.delFuelBtn').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`,btn.dataset.id)); loadFuel();});});
 }
 
 // ============================================================
 // メンテナンス
 // ============================================================
-document.querySelectorAll('.maintSub').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.maintSub').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    $('maintListActive').classList.toggle('hidden', btn.dataset.status !== 'active');
-    $('maintListDone').classList.toggle('hidden', btn.dataset.status !== 'done');
+document.querySelectorAll('.maintSub').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.maintSub').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
+    $('maintListActive').classList.toggle('hidden',btn.dataset.status!=='active');
+    $('maintListDone').classList.toggle('hidden',btn.dataset.status!=='done');
   });
 });
-$('addMaintBtn').addEventListener('click', () => {
-  if (!currentCarId) return alert('先に車両を選択してください');
-  $('maintDocId').value = '';
-  document.querySelectorAll('#maintModal input:not([type=hidden],[type=checkbox]), #maintModal select, #maintModal textarea').forEach(i => i.value = '');
-  $('workChecklistBlock').classList.add('hidden');
-  renderWorkChecklist([]);
-  $('maintModal').classList.add('active');
+$('addMaintBtn').addEventListener('click',()=>{
+  if(!currentCarId) return alert('先に車両を選択してください');
+  $('maintDocId').value='';
+  document.querySelectorAll('#maintModal input:not([type=hidden],[type=checkbox]),#maintModal select,#maintModal textarea').forEach(i=>i.value='');
+  $('workChecklistBlock').classList.add('hidden'); renderWorkChecklist([]); $('maintModal').classList.add('active');
 });
-$('closeMaintModal').addEventListener('click', () => $('maintModal').classList.remove('active'));
+$('closeMaintModal').addEventListener('click',()=>$('maintModal').classList.remove('active'));
 async function saveMaint(status) {
-  if (!currentCarId) return alert('先に車両を選択してください');
-  const checkedWorks = [...document.querySelectorAll('.workCheckItem:checked')].map(cb => cb.value);
-  const data = {
-    status, category: $('mCategory').value, shopId: $('mShop').value, staffName: $('mStaff').value,
-    reservationDate: $('mResDate').value, reservationTime: $('mResTime').value, memo: $('mMemo').value,
-    completedDate: $('mDoneDate').value, completedOdo: Number($('mDoneOdo').value)||null,
-    actualCost: Number($('mCost').value)||null, workDetail: $('mWork').value,
-    checkedWorks, doneNote: $('mDoneNote').value, nextScheduleDate: $('mNext').value, updatedAt: serverTimestamp()
-  };
-  const docId = $('maintDocId').value;
-  const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
-  if (docId) { await updateDoc(doc(colRef, docId), data); }
-  else { data.createdAt = serverTimestamp(); await addDoc(colRef, data); }
-  showToast(status === '完了' ? '完了記録を保存しました' : '予約を保存しました');
+  if(!currentCarId) return alert('先に車両を選択してください');
+  const checkedWorks=[...document.querySelectorAll('.workCheckItem:checked')].map(cb=>cb.value);
+  const data={status,category:$('mCategory').value,shopId:$('mShop').value,staffName:$('mStaff').value,
+    reservationDate:$('mResDate').value,reservationTime:$('mResTime').value,memo:$('mMemo').value,
+    completedDate:$('mDoneDate').value,completedOdo:Number($('mDoneOdo').value)||null,
+    actualCost:Number($('mCost').value)||null,workDetail:$('mWork').value,
+    checkedWorks,doneNote:$('mDoneNote').value,nextScheduleDate:$('mNext').value,updatedAt:serverTimestamp()};
+  const docId=$('maintDocId').value, colRef=collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`);
+  if(docId){await updateDoc(doc(colRef,docId),data);}else{data.createdAt=serverTimestamp(); await addDoc(colRef,data);}
+  showToast(status==='完了'?'完了記録を保存しました':'予約を保存しました');
   $('maintModal').classList.remove('active'); loadMaint();
 }
-$('saveMaintReserveBtn').addEventListener('click', () => saveMaint('予約済み'));
-$('saveMaintDoneBtn').addEventListener('click', () => saveMaint('完了'));
-
+$('saveMaintReserveBtn').addEventListener('click',()=>saveMaint('予約済み'));
+$('saveMaintDoneBtn').addEventListener('click',()=>saveMaint('完了'));
 async function loadMaint() {
-  if (!currentCarId) return;
-  const snap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`), orderBy('createdAt','desc')));
-  const activeList = $('maintListActive'), doneList = $('maintListDone');
-  activeList.innerHTML = ''; doneList.innerHTML = '';
-  let ac = 0, dc = 0;
-  snap.forEach(d => {
-    const m = d.data();
-    const div = document.createElement('div');
-    div.className = 'bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    if (m.status === '完了') {
+  if(!currentCarId) return;
+  const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`),orderBy('createdAt','desc')));
+  const aL=$('maintListActive'),dL=$('maintListDone'); aL.innerHTML=''; dL.innerHTML='';
+  let ac=0,dc=0;
+  snap.forEach(d=>{
+    const m=d.data(), div=document.createElement('div');
+    div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+    if(m.status==='完了'){
       dc++;
-      const worksHtml = (m.checkedWorks||[]).map(w => `<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
-      div.innerHTML = `
-        <p class="font-bold text-green-700">✅ ${m.category}</p>
-        <p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>
-        ${worksHtml ? `<div class="flex flex-wrap gap-1 mt-1">${worksHtml}</div>` : ''}
-        ${m.memo ? `<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>` : ''}
-        ${m.doneNote ? `<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>` : ''}
-        ${m.nextScheduleDate ? `<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>` : ''}
-        <div class="flex justify-end"><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
-      doneList.appendChild(div);
+      const wh=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
+      div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex justify-end"><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
+      dL.appendChild(div);
     } else {
       ac++;
-      const days = daysUntil(m.reservationDate);
-      div.innerHTML = `
-        <div class="flex justify-between items-start">
-          <div><p class="font-bold">${m.category}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div>
-          <span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span>
-        </div>
-        ${m.memo ? `<p class="text-xs text-slate-400">📝 ${m.memo}</p>` : ''}
-        <div class="flex gap-2 pt-1">
-          <button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button>
-          <button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button>
-        </div>`;
-      activeList.appendChild(div);
+      const days=daysUntil(m.reservationDate);
+      div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
+      aL.appendChild(div);
     }
   });
-  if (ac === 0) activeList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
-  if (dc === 0) doneList.innerHTML = '<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
-  document.querySelectorAll('.editMaintBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const snap2 = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
-      const m = snap2.data();
-      $('maintDocId').value = btn.dataset.id;
-      $('mCategory').value = m.category||''; $('mShop').value = m.shopId||''; $('mStaff').value = m.staffName||'';
-      $('mResDate').value = m.reservationDate||''; $('mResTime').value = m.reservationTime||''; $('mMemo').value = m.memo||'';
-      $('mDoneDate').value = m.completedDate||new Date().toISOString().slice(0,10);
-      $('mDoneOdo').value = m.completedOdo||''; $('mCost').value = m.actualCost||''; $('mWork').value = m.workDetail||'';
-      $('mNext').value = m.nextScheduleDate||''; $('mDoneNote').value = m.doneNote||'';
-      const show = shouldShowChecklist(m.category||'');
-      $('workChecklistBlock').classList.toggle('hidden', !show);
-      renderWorkChecklist(m.checkedWorks||[]);
-      $('maintModal').classList.add('active');
+  if(ac===0) aL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
+  if(dc===0) dL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
+  document.querySelectorAll('.editMaintBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      const s=await getDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)), m=s.data();
+      $('maintDocId').value=btn.dataset.id; $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
+      $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
+      $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
+      $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||'';
+      $('mNext').value=m.nextScheduleDate||''; $('mDoneNote').value=m.doneNote||'';
+      $('workChecklistBlock').classList.toggle('hidden',!shouldShowChecklist(m.category||''));
+      renderWorkChecklist(m.checkedWorks||[]); $('maintModal').classList.add('active');
     });
   });
-  document.querySelectorAll('.delMaintBtn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      if (!confirm('削除しますか？')) return;
-      await deleteDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`, btn.dataset.id));
-      loadMaint();
-    });
-  });
+  document.querySelectorAll('.delMaintBtn').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)); loadMaint();});});
 }
 </script>
 </body>
