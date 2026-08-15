@@ -344,7 +344,15 @@
       <input type="text" id="cYear" placeholder="初度登録（例：令和7年3月）" class="border p-2.5 rounded-xl">
       <input type="text" id="cPlate" placeholder="ナンバー" class="border p-2.5 rounded-xl col-span-2">
       <input type="text" id="cVin" placeholder="車台番号" class="border p-2.5 rounded-xl col-span-2">
-      <select id="cFuelType" class="border p-2.5 rounded-xl"><option value="">燃料種別</option><option>ガソリン</option><option>ハイブリッド</option><option>軽油</option><option>EV</option><option>PHEV</option></select>
+      <select id="cFuelType" class="border p-2.5 rounded-xl">
+        <option value="">燃料種別</option>
+        <option>ガソリン</option>
+        <option>ハイブリッド</option>
+        <option>e-POWER</option>
+        <option>軽油</option>
+        <option>EV</option>
+        <option>PHEV</option>
+      </select>
       <select id="cDriveType" class="border p-2.5 rounded-xl"><option value="">駆動方式</option><option>FF</option><option>FR</option><option>4WD</option><option>AWD</option></select>
       <input type="number" id="cOdo" placeholder="現在の走行距離(km)" class="border p-2.5 rounded-xl col-span-2">
       <div class="col-span-2"><label class="text-xs text-slate-500 block mb-1">車検満了日</label><input type="date" id="cShaken" class="border p-2.5 rounded-xl w-full"></div>
@@ -556,7 +564,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
