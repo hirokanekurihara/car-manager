@@ -301,7 +301,6 @@
         <div id="ticketList" class="space-y-3"></div>
       </div>
 
-      <!-- 📅 年間計画タブ：既存の車検・保険満了日を自動合成表示＋手動計画イベント -->
       <div id="dtab-plan" class="detail-tab-content hidden space-y-3">
         <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-4 rounded-2xl shadow">
           <p class="text-slate-300 text-xs mb-3">📅 年間スケジュール概要</p>
@@ -532,6 +531,7 @@
           <label class="text-xs text-slate-500 block mb-1">繰り返し</label>
           <select id="pRepeat" class="border p-2.5 rounded-xl w-full">
             <option value="none">なし（1回のみ）</option>
+            <option value="3month">3ヶ月ごと</option>
             <option value="6month">6ヶ月ごと</option>
             <option value="1year">1年ごと</option>
             <option value="2year">2年ごと</option>
@@ -556,7 +556,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -786,7 +786,7 @@ $('addCategoryBtn').addEventListener('click', async () => {
 });
 
 // ============================================================
-// 店舗マスタ（メンテ用・インライン編集対応）
+// 店舗マスタ（メンテ用）
 // ============================================================
 async function loadShops() {
   const colRef = collection(db,`users/${currentUser.uid}/shops`);
@@ -844,7 +844,7 @@ $('addShopBtn').addEventListener('click', async () => {
 });
 
 // ============================================================
-// 給油店舗マスタ（メンテ店舗マスタとは独立・インライン編集対応）
+// 給油店舗マスタ
 // ============================================================
 async function loadFuelShops() {
   const colRef=collection(db,`users/${currentUser.uid}/fuelShops`);
@@ -897,7 +897,7 @@ $('addFuelShopBtn').addEventListener('click', async () => {
 });
 
 // ============================================================
-// 保険料3年合計リアルタイム計算
+// 保険料3年合計
 // ============================================================
 function updateFeeTotalDisplay() {
   const total=(Number($('iAnnualFee1').value)||0)+(Number($('iAnnualFee2').value)||0)+(Number($('iAnnualFee3').value)||0);
@@ -1002,7 +1002,8 @@ $('editInsBtn').addEventListener('click',()=>{
   const ins=currentDetailCarData.insurance||{},jibai=currentDetailCarData.jibaiInsurance||{};
   $('insCarDocId').value=currentDetailCarData.id;
   $('iCompany').value=ins.company||''; $('iPolicy').value=ins.policyNo||''; $('iGrade').value=ins.grade||'';
-  $('iCondition').value=ins.condition||''; $('iAnnualFee1').value=ins.annualFee1||''; $('iAnnualFee2').value=ins.annualFee2||''; $('iAnnualFee3').value=ins.annualFee3||'';
+  $('iCondition').value=ins.condition||'';
+  $('iAnnualFee1').value=ins.annualFee1||''; $('iAnnualFee2').value=ins.annualFee2||''; $('iAnnualFee3').value=ins.annualFee3||'';
   updateFeeTotalDisplay();
   $('iStaff').value=ins.staffName||''; $('iTel').value=ins.staffTel||'';
   $('iAgency').value=ins.agencyName||''; $('iAgencyTel').value=ins.agencyTel||'';
@@ -1045,7 +1046,7 @@ $('saveTireBtn').addEventListener('click',async()=>{
 });
 
 // ============================================================
-// 年間計画タブ（annualPlansコレクション＋車検・保険満了日の自動合成）
+// 年間計画タブ
 // ============================================================
 $('addPlanBtn').addEventListener('click',()=>{
   if(!currentDetailCarData) return;
@@ -1074,10 +1075,6 @@ $('savePlanBtn').addEventListener('click',async()=>{
   loadPlanTab(carId, currentDetailCarData);
 });
 
-// 年間計画タブの描画。手動登録した計画（Firestore保存）に加え、
-// 車両基本情報・保険タブにすでに登録されている車検・任意保険・自賠責の
-// 満了日を「自動プラン」として合成する。自動プランはFirestoreへの
-// 書き込みを一切行わない表示専用データであり、編集・削除ボタンも出さない。
 async function loadPlanTab(carId, carData) {
   const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/annualPlans`),orderBy('date','asc')));
   const manualPlans=snap.docs.map(d=>({id:d.id,...d.data(),isAuto:false}));
@@ -1149,7 +1146,7 @@ async function loadPlanTab(carId, carData) {
 function buildPlanCard(p, carId, isPast) {
   const days=daysUntil(p.date);
   const urgencyBg=isPast?'bg-slate-50 border-slate-100':days<=7?'bg-red-50 border-red-100':days<=30?'bg-yellow-50 border-yellow-100':'bg-white border-slate-100';
-  const repeatLabel={none:'','6month':'6ヶ月ごと','1year':'1年ごと','2year':'2年ごと'}[p.repeat||'none'];
+  const repeatLabel={none:'','3month':'3ヶ月ごと','6month':'6ヶ月ごと','1year':'1年ごと','2year':'2年ごと'}[p.repeat||'none'];
   const div=document.createElement('div');
   div.className=`${urgencyBg} border rounded-2xl p-3 text-sm`;
   const actionsHtml = p.isAuto
