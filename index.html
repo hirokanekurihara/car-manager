@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="マイカー管理">
 <meta name="theme-color" content="#1d4ed8">
 <title>マイカー管理アプリ</title>
-<link rel="apple-touch-icon" href="A_minimalist_iPhone_app_icon_for_vehicle_fleet_man-1786890892613.png">
-<link rel="icon" type="image/png" href="A_minimalist_iPhone_app_icon_for_vehicle_fleet_man-1786890892613.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
@@ -53,6 +53,7 @@
   .sort-btn:disabled { opacity:.3; cursor:default; }
   .modal-scroll { -webkit-overflow-scrolling: touch; overflow-y: auto; }
   .month-dot { width:6px; height:6px; border-radius:50%; display:inline-block; }
+  .fuel-edit-mode { border: 2px solid #facc15 !important; }
 </style>
 </head>
 <body class="bg-slate-100 text-slate-800 min-h-screen">
@@ -99,8 +100,11 @@
       </div>
       <p class="text-center text-blue-200 text-xs mt-2">単位：km/L</p>
     </div>
-    <div class="bg-white p-4 rounded-xl shadow-sm">
-      <h3 class="font-bold mb-3 text-slate-700">⛽ 給油記録を追加</h3>
+    <div id="fuelFormContainer" class="bg-white p-4 rounded-xl shadow-sm border border-transparent transition-colors">
+      <div class="flex justify-between items-center mb-3">
+        <h3 id="fFormTitle" class="font-bold text-slate-700">⛽ 給油記録を追加</h3>
+        <button id="cancelFuelEditBtn" class="hidden text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-lg font-bold transition">✕ キャンセル</button>
+      </div>
       <div class="grid grid-cols-2 gap-2 text-sm">
         <input type="date" id="fDate" class="border border-slate-300 p-2 rounded-lg col-span-2">
         <input type="number" id="fOdo" placeholder="走行距離(km)" class="border border-slate-300 p-2 rounded-lg">
@@ -120,7 +124,7 @@
           </select>
           <input type="text" id="fShopFree" placeholder="または直接入力（マスタにない場合）" class="border border-slate-300 p-2 rounded-lg w-full text-xs">
         </div>
-        <div class="col-span-2 border border-slate-300 p-3 rounded-lg bg-slate-50 space-y-2">
+        <div id="receiptScanBlock" class="col-span-2 border border-slate-300 p-3 rounded-lg bg-slate-50 space-y-2">
           <button type="button" id="scanReceiptBtn" class="w-full bg-slate-600 hover:bg-slate-700 text-white py-2 rounded-lg font-bold text-xs transition">🧾 レシートをスキャンして自動入力</button>
           <input type="file" id="fReceiptScan" accept="image/*" capture="environment" class="hidden">
           <p id="scanStatus" class="text-center text-xs text-slate-500 hidden"></p>
@@ -566,7 +570,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -593,6 +597,7 @@ let cachedFuelShops = [];
 let currentTabOrder = [...DEFAULT_TAB_ORDER];
 let activeTabKey = null;
 let chartMonthly = null, chartDonut = null, chartEfficiency = null;
+let editingFuelId = null;
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
@@ -713,6 +718,7 @@ function buildMainNav() {
       document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
       btn.classList.add('active'); $(`tab-${key}`).classList.add('active');
+      if (key !== 'fuel') resetFuelEditMode();
     });
     nav.appendChild(btn);
   });
@@ -1383,22 +1389,74 @@ $('fReceiptScan').addEventListener('change',async e=>{
 // ============================================================
 // 給油記録
 // ============================================================
-$('saveFuelBtn').addEventListener('click',async()=>{
-  if(!currentCarId) return alert('先に車両を選択してください');
-  const date=$('fDate').value,odo=Number($('fOdo').value),liters=Number($('fLiters').value),price=Number($('fPrice').value),isFull=$('fFull').checked;
-  const shop=$('fShopSelect').value||$('fShopFree').value.trim();
-  if(!date||!odo||!liters) return alert('日付・走行距離・給油量は必須です');
-  const unitPrice=(liters>0&&price>0)?Math.round(price/liters):null;
-  const prevSnap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('odometer','desc')));
-  let efficiency=null;
-  if(!prevSnap.empty){const prev=prevSnap.docs[0].data(); if(isFull&&prev.fullTank&&odo>prev.odometer) efficiency=Math.round(((odo-prev.odometer)/liters)*10)/10;}
-  await addDoc(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),{date,odometer:odo,liters,amount:price,unitPrice,shop,fullTank:isFull,efficiency,createdAt:serverTimestamp()});
-  await updateDoc(doc(db,`users/${currentUser.uid}/cars`,currentCarId),{odo});
-  $('fDate').value=''; $('fOdo').value=''; $('fLiters').value=''; $('fPrice').value='';
-  $('fShopSelect').value=''; $('fShopFree').value=''; $('fUnitPriceDisplay').textContent='- 円/L';
+function resetFuelEditMode() {
+  editingFuelId = null;
+  $('fuelFormContainer').classList.remove('fuel-edit-mode');
+  $('fFormTitle').textContent = '⛽ 給油記録を追加';
+  $('fFormTitle').classList.remove('text-yellow-600');
+  $('cancelFuelEditBtn').classList.add('hidden');
+  $('receiptScanBlock').classList.remove('hidden');
+  $('saveFuelBtn').textContent = '＋ 記録追加';
+  $('saveFuelBtn').className = 'col-span-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold transition shadow';
+  
+  $('fDate').value = ''; $('fOdo').value = ''; $('fLiters').value = ''; $('fPrice').value = '';
+  $('fShopSelect').value = ''; $('fShopFree').value = ''; $('fFull').checked = true;
+  $('fUnitPriceDisplay').textContent = '- 円/L';
   $('scanStatus').classList.add('hidden');
-  showToast('給油記録を追加しました'); loadFuel(); loadCars();
+}
+
+$('cancelFuelEditBtn').addEventListener('click', resetFuelEditMode);
+
+$('saveFuelBtn').addEventListener('click', async () => {
+  if (!currentCarId) return alert('先に車両を選択してください');
+  const date = $('fDate').value, odo = Number($('fOdo').value), liters = Number($('fLiters').value), price = Number($('fPrice').value), isFull = $('fFull').checked;
+  const shop = $('fShopSelect').value || $('fShopFree').value.trim();
+  if (!date || !odo || !liters) return alert('日付・走行距離・給油量は必須です');
+  
+  const unitPrice = (liters > 0 && price > 0) ? Math.round(price / liters) : null;
+  
+  // 燃費再計算ロジック（編集時は自分自身を除外して、入力ODO未満の直近記録を探す）
+  const allSnap = await getDocs(query(collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`), orderBy('odometer', 'desc')));
+  let efficiency = null;
+  
+  const validPrevLogs = allSnap.docs.filter(d => d.id !== editingFuelId && d.data().odometer < odo);
+  
+  if (validPrevLogs.length > 0) {
+    const prev = validPrevLogs[0].data();
+    if (isFull && prev.fullTank) {
+      efficiency = Math.round(((odo - prev.odometer) / liters) * 10) / 10;
+    }
+  }
+
+  const data = {
+    date, odometer: odo, liters, amount: price, unitPrice, shop, fullTank: isFull, efficiency
+  };
+
+  const colRef = collection(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`);
+  
+  if (editingFuelId) {
+    data.updatedAt = serverTimestamp();
+    await updateDoc(doc(colRef, editingFuelId), data);
+    showToast('給油記録を更新しました');
+  } else {
+    data.createdAt = serverTimestamp();
+    await addDoc(colRef, data);
+    showToast('給油記録を追加しました');
+  }
+
+  // ODO巻き戻り防止の安全化ロジック
+  const carSnap = await getDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId));
+  if (carSnap.exists()) {
+    const currentOdo = carSnap.data().odo || 0;
+    if (odo > currentOdo) {
+      await updateDoc(doc(db, `users/${currentUser.uid}/cars`, currentCarId), { odo });
+    }
+  }
+
+  resetFuelEditMode();
+  loadFuel(); loadCars();
 });
+
 async function loadFuel() {
   if(!currentCarId) return;
   const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`),orderBy('date','desc')));
@@ -1407,6 +1465,7 @@ async function loadFuel() {
   const effs=[]; snap.forEach(d=>{const f=d.data(); if(f.efficiency) effs.push(f.efficiency);});
   if(effs.length){$('fuelSummary').classList.remove('hidden'); $('fuel-avg').textContent=(effs.reduce((a,b)=>a+b,0)/effs.length).toFixed(1); $('fuel-latest').textContent=effs[0]; $('fuel-best').textContent=Math.max(...effs); $('fuel-worst').textContent=Math.min(...effs);}
   else $('fuelSummary').classList.add('hidden');
+  
   snap.forEach(d=>{
     const f=d.data();
     const up=f.unitPrice??(f.amount&&f.liters?Math.round(f.amount/f.liters):null);
@@ -1414,10 +1473,60 @@ async function loadFuel() {
     const st=f.shop?`<span class="text-xs text-slate-400">⛽ ${f.shop}</span>`:'';
     const eb=f.efficiency?`<span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-xs font-bold">${f.efficiency} km/L</span>`:`<span class="text-xs text-slate-400">${f.fullTank?'算出不可':'部分給油'}</span>`;
     const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm';
-    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${f.date}${f.fullTank?' <span class="text-xs text-slate-400 font-normal">満タン</span>':''}</p><p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${(f.amount||0).toLocaleString()}</p><div class="flex items-center gap-2 mt-0.5">${upt}${st}</div></div><div class="flex items-center gap-2 flex-shrink-0">${eb}<button class="delFuelBtn text-red-400 text-xl leading-none ml-1" data-id="${d.id}">×</button></div></div>`;
+    div.innerHTML=`
+      <div class="flex justify-between items-start">
+        <div>
+          <p class="font-bold">${f.date}${f.fullTank?' <span class="text-xs text-slate-400 font-normal">満タン</span>':''}</p>
+          <p class="text-xs text-slate-500 mt-0.5">ODO: ${f.odometer.toLocaleString()}km ／ ${f.liters}L ／ ¥${(f.amount||0).toLocaleString()}</p>
+          <div class="flex items-center gap-2 mt-0.5">${upt}${st}</div>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          ${eb}
+          <button class="editFuelBtn text-blue-500 text-lg leading-none ml-1" data-id="${d.id}">✏️</button>
+          <button class="delFuelBtn text-red-400 text-xl leading-none ml-1" data-id="${d.id}">×</button>
+        </div>
+      </div>`;
     list.appendChild(div);
   });
-  list.querySelectorAll('.delFuelBtn').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`,btn.dataset.id)); loadFuel();});});
+
+  list.querySelectorAll('.editFuelBtn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const docSnap = await getDoc(doc(db, `users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`, btn.dataset.id));
+      if (!docSnap.exists()) return;
+      const f = docSnap.data();
+      
+      editingFuelId = btn.dataset.id;
+      $('fuelFormContainer').classList.add('fuel-edit-mode');
+      $('fFormTitle').textContent = '✏️ 編集中';
+      $('fFormTitle').classList.add('text-yellow-600');
+      $('cancelFuelEditBtn').classList.remove('hidden');
+      $('receiptScanBlock').classList.add('hidden');
+      $('saveFuelBtn').textContent = '💾 更新する';
+      $('saveFuelBtn').className = 'col-span-2 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-xl font-bold transition shadow';
+
+      $('fDate').value = f.date || '';
+      $('fOdo').value = f.odometer || '';
+      $('fLiters').value = f.liters || '';
+      $('fPrice').value = f.amount || '';
+      $('fFull').checked = f.fullTank;
+      
+      const m = cachedFuelShops.find(s => s.name === f.shop);
+      if (m) { $('fShopSelect').value = f.shop; $('fShopFree').value = ''; }
+      else { $('fShopSelect').value = ''; $('fShopFree').value = f.shop || ''; }
+      
+      updateUnitPriceDisplay();
+      window.scrollTo({ top: $('fuelFormContainer').offsetTop - 80, behavior: 'smooth' });
+    });
+  });
+
+  list.querySelectorAll('.delFuelBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      if(!confirm('削除しますか？')) return; 
+      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/fuelLogs`,btn.dataset.id)); 
+      if (editingFuelId === btn.dataset.id) resetFuelEditMode();
+      loadFuel();
+    });
+  });
 }
 
 // ============================================================
