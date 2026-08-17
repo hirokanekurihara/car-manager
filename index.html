@@ -180,8 +180,29 @@
       </div>
       <ul id="fuelShopList" class="text-sm divide-y divide-slate-100"></ul>
     </div>
+    <!-- v1.5.0 追加: バックアップと復元 -->
     <div class="bg-white p-4 rounded-xl shadow-sm">
-      <h3 class="font-bold mb-1 text-slate-700">📋 バージョン情報</h3>
+      <h3 class="font-bold mb-2 text-slate-700">💾 バックアップと復元</h3>
+      <p class="text-xs text-slate-500 mb-4">
+        全データをJSONファイルとして保存・読み込みできます。<br>
+        ⚠️ 復元時は現在のデータを<span class="font-bold text-red-600">完全に削除</span>してから
+        バックアップ内容に置き換えます（マージはしません）。
+      </p>
+      <div class="space-y-3">
+        <button id="backupBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-bold text-sm transition shadow flex items-center justify-center gap-2">
+          <span>📤</span><span>バックアップを保存（JSONダウンロード）</span>
+        </button>
+        <div class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center">
+          <p class="text-sm text-slate-500 mb-2">📥 バックアップから復元</p>
+          <label class="cursor-pointer inline-block bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 px-4 py-2 rounded-lg text-sm font-bold transition">
+            JSONファイルを選択
+            <input type="file" id="restoreInput" accept=".json" class="hidden">
+          </label>
+        </div>
+        <div id="backupStatus" class="hidden text-sm text-center py-2 px-3 rounded-lg"></div>
+      </div>
+    </div>
+
       <p id="versionInfoText" class="text-xs text-slate-500 mb-2"></p>
       <button id="openChangelogBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-2 rounded-lg text-sm font-bold transition">📝 変更履歴（CHANGELOG）を確認する</button>
     </div>
@@ -570,12 +591,13 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.5.0';
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
-
+const BATCH_CHUNK_SIZE = 400; // v1.5.0追加: Firestoreバッチ処理の分割サイズ
 const firebaseConfig = {
+
   apiKey: "AIzaSyD7fNdMoZBrzBKhQXDnQ2raUHI4KeDN674",
   authDomain: "my-car-manager-daab9.firebaseapp.com",
   projectId: "my-car-manager-daab9",
@@ -1597,6 +1619,145 @@ async function loadMaint() {
   });
   document.querySelectorAll('.delMaintBtn').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)); loadMaint();});});
 }
+// ============================================================
+// v1.5.0 バックアップ・復元機能
+// ============================================================
+function setBackupStatus(msg, type = 'info') {
+  const el = $('backupStatus');
+  el.classList.remove('hidden', 'bg-green-50', 'text-green-700', 'bg-red-50', 'text-red-700', 'bg-blue-50', 'text-blue-700');
+  if (type === 'success') el.classList.add('bg-green-50', 'text-green-700');
+  else if (type === 'error') el.classList.add('bg-red-50', 'text-red-700');
+  else el.classList.add('bg-blue-50', 'text-blue-700');
+  el.textContent = msg;
+}
+
+function tsToStr(val) {
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (val.toDate) return val.toDate().toISOString();
+  if (val instanceof Date) return val.toISOString();
+  return null;
+}
+
+async function generateBackup() {
+  const uid = currentUser.uid;
+  const settingsSnap = await getDoc(doc(db, `users/${uid}/settings/appSettings`));
+  const settings = settingsSnap.exists() ? settingsSnap.data() : {};
+  const catSnap = await getDocs(collection(db, `users/${uid}/categories`));
+  const categories = catSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt) }));
+  const shopSnap = await getDocs(collection(db, `users/${uid}/shops`));
+  const shops = shopSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt) }));
+  const fsSnap = await getDocs(collection(db, `users/${uid}/fuelShops`));
+  const fuelShops = fsSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt) }));
+  const carsSnap = await getDocs(collection(db, `users/${uid}/cars`));
+  const cars = await Promise.all(carsSnap.docs.map(async carDoc => {
+    const carData = { id: carDoc.id, ...carDoc.data(), createdAt: tsToStr(carDoc.data().createdAt), updatedAt: tsToStr(carDoc.data().updatedAt) };
+    const [fuelSnap, maintSnap, ticketSnap, planSnap] = await Promise.all([
+      getDocs(collection(db, `users/${uid}/cars/${carDoc.id}/fuelLogs`)),
+      getDocs(collection(db, `users/${uid}/cars/${carDoc.id}/maintenanceLogs`)),
+      getDocs(collection(db, `users/${uid}/cars/${carDoc.id}/ticketPacks`)),
+      getDocs(collection(db, `users/${uid}/cars/${carDoc.id}/annualPlans`))
+    ]);
+    carData.fuelLogs = fuelSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt), updatedAt: tsToStr(d.data().updatedAt) }));
+    carData.maintenanceLogs = maintSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt), updatedAt: tsToStr(d.data().updatedAt) }));
+    carData.ticketPacks = ticketSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt) }));
+    carData.annualPlans = planSnap.docs.map(d => ({ id: d.id, ...d.data(), createdAt: tsToStr(d.data().createdAt), updatedAt: tsToStr(d.data().updatedAt) }));
+    return carData;
+  }));
+  return { schema: 'car-manager-backup-v1', exportedAt: new Date().toISOString(), appVersion: APP_VERSION, uid, data: { settings, categories, shops, fuelShops, cars } };
+}
+
+async function commitInChunks(operations) {
+  for (let i = 0; i < operations.length; i += BATCH_CHUNK_SIZE) {
+    const chunk = operations.slice(i, i + BATCH_CHUNK_SIZE);
+    const batch = writeBatch(db);
+    chunk.forEach(op => { if (op.type === 'delete') batch.delete(op.ref); else if (op.type === 'set') batch.set(op.ref, op.data); });
+    await batch.commit();
+  }
+}
+
+async function restoreBackup(backupJson) {
+  const uid = currentUser.uid;
+  const { data } = backupJson;
+  setBackupStatus('🗑️ 既存データを削除中…', 'info');
+  const deleteOps = [];
+  deleteOps.push({ type: 'delete', ref: doc(db, `users/${uid}/settings/appSettings`) });
+  for (const colName of ['categories', 'shops', 'fuelShops']) {
+    const snap = await getDocs(collection(db, `users/${uid}/${colName}`));
+    snap.docs.forEach(d => deleteOps.push({ type: 'delete', ref: doc(db, `users/${uid}/${colName}`, d.id) }));
+  }
+  const existingCarsSnap = await getDocs(collection(db, `users/${uid}/cars`));
+  for (const carDoc of existingCarsSnap.docs) {
+    const cid = carDoc.id;
+    for (const sub of ['fuelLogs', 'maintenanceLogs', 'ticketPacks', 'annualPlans']) {
+      const subSnap = await getDocs(collection(db, `users/${uid}/cars/${cid}/${sub}`));
+      subSnap.docs.forEach(d => deleteOps.push({ type: 'delete', ref: doc(db, `users/${uid}/cars/${cid}/${sub}`, d.id) }));
+    }
+    deleteOps.push({ type: 'delete', ref: doc(db, `users/${uid}/cars`, cid) });
+  }
+  await commitInChunks(deleteOps);
+
+  setBackupStatus('📝 データを書き込み中…', 'info');
+  const writeOps = [];
+  if (data.settings && Object.keys(data.settings).length > 0) {
+    writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/settings/appSettings`), data: data.settings });
+  }
+  (data.categories || []).forEach(cat => { const { id, createdAt, ...rest } = cat; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/categories`, id), data: { ...rest, createdAt: serverTimestamp() } }); });
+  (data.shops || []).forEach(shop => { const { id, createdAt, ...rest } = shop; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/shops`, id), data: { ...rest, createdAt: serverTimestamp() } }); });
+  (data.fuelShops || []).forEach(fs => { const { id, createdAt, ...rest } = fs; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/fuelShops`, id), data: { ...rest, createdAt: serverTimestamp() } }); });
+  (data.cars || []).forEach(car => {
+    const { id: carId, fuelLogs, maintenanceLogs, ticketPacks, annualPlans, createdAt, updatedAt, ...carRest } = car;
+    writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/cars`, carId), data: { ...carRest, createdAt: serverTimestamp(), updatedAt: serverTimestamp() } });
+    (fuelLogs || []).forEach(log => { const { id, createdAt: lca, updatedAt: lua, ...logRest } = log; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/cars/${carId}/fuelLogs`, id), data: { ...logRest, createdAt: serverTimestamp() } }); });
+    (maintenanceLogs || []).forEach(log => { const { id, createdAt: lca, updatedAt: lua, ...logRest } = log; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/cars/${carId}/maintenanceLogs`, id), data: { ...logRest, createdAt: serverTimestamp() } }); });
+    (ticketPacks || []).forEach(pack => { const { id, createdAt: pca, ...packRest } = pack; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/cars/${carId}/ticketPacks`, id), data: { ...packRest, createdAt: serverTimestamp() } }); });
+    (annualPlans || []).forEach(plan => { const { id, createdAt: pca, updatedAt: pua, ...planRest } = plan; writeOps.push({ type: 'set', ref: doc(db, `users/${uid}/cars/${carId}/annualPlans`, id), data: { ...planRest, createdAt: serverTimestamp() } }); });
+  });
+  await commitInChunks(writeOps);
+}
+
+$('backupBtn').addEventListener('click', async () => {
+  if (!currentUser) return;
+  $('backupBtn').disabled = true;
+  setBackupStatus('📦 データを収集中…', 'info');
+  try {
+    const backup = await generateBackup();
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `car-manager-backup-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    setBackupStatus('✅ バックアップファイルをダウンロードしました', 'success');
+  } catch (err) {
+    console.error(err); setBackupStatus('❌ バックアップに失敗しました: ' + err.message, 'error');
+  } finally { $('backupBtn').disabled = false; }
+});
+
+$('restoreInput').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return; e.target.value = '';
+  let backupJson;
+  try { backupJson = JSON.parse(await file.text()); }
+  catch { setBackupStatus('❌ ファイルの読み込みに失敗しました。', 'error'); return; }
+
+  if (backupJson.schema !== 'car-manager-backup-v1') { setBackupStatus('❌ これは正規のバックアップファイルではありません', 'error'); return; }
+
+  const exportedAt = backupJson.exportedAt ? new Date(backupJson.exportedAt).toLocaleString('ja-JP') : '不明';
+  if (!confirm(`⚠️ バックアップから復元します\n\n日時: ${exportedAt}\n車両数: ${(backupJson.data?.cars || []).length}台\n\n現在のデータは【完全に削除】されます。よろしいですか？`)) return;
+  if (!confirm(`🚨 最終確認\n\nこの操作は元に戻せません。\n本当に復元を実行しますか？`)) return;
+
+  $('restoreInput').disabled = true; $('backupBtn').disabled = true;
+  try {
+    await restoreBackup(backupJson);
+    setBackupStatus('✅ 復元完了。データを再読み込みします…', 'success');
+    await loadTabOrder(); await loadCategories(); await loadShops(); await loadFuelShops(); await loadCars();
+    showToast('✅ 復元が完了しました');
+  } catch (err) {
+    console.error(err); setBackupStatus('❌ 復元エラー: ' + err.message, 'error');
+  } finally {
+    $('restoreInput').disabled = false; $('backupBtn').disabled = false;
+  }
+});
+
 </script>
 </body>
 </html>
