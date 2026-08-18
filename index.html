@@ -152,6 +152,13 @@
       <ul id="tabOrderList" class="text-sm divide-y divide-slate-100 mb-3"></ul>
       <button id="resetTabOrderBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 py-2 rounded-lg text-sm font-bold transition">↩️ 初期の並び順に戻す</button>
     </div>
+        <!-- v1.6.0 追加: 車両の並び替え -->
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-1 text-slate-700">🚘 車両の表示順</h3>
+      <p class="text-xs text-slate-400 mb-3">▲▼で並び替え。車両タブのカード一覧・対象車両プルダウンの順に反映されます。</p>
+      <ul id="carOrderList" class="text-sm divide-y divide-slate-100"></ul>
+    </div>
+
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🔧 作業カテゴリの管理</h3>
       <p class="text-xs text-slate-400 -mt-2 mb-3">※「車検整備」「定期点検」選択時のみ完了画面にチェックリストが表示されます</p>
@@ -591,7 +598,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.5.0';
+const APP_VERSION = '1.6.0'; // v1.6.0へ更新
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -616,6 +623,7 @@ let currentDetailCarData = null;
 let cachedCategories = [];
 let cachedShops = [];
 let cachedFuelShops = [];
+let cachedCars = []; // ← 追加：sortOrder順にソート済みの車両配列を保持
 let currentTabOrder = [...DEFAULT_TAB_ORDER];
 let activeTabKey = null;
 let chartMonthly = null, chartDonut = null, chartEfficiency = null;
@@ -1028,10 +1036,13 @@ $('saveCarBtn').addEventListener('click',async()=>{
   const docId=$('carDocId').value;
   if(docId){await updateDoc(doc(db,`users/${currentUser.uid}/cars`,docId),data);}
   else{
-    const snap=await getDocs(collection(db,`users/${currentUser.uid}/cars`));
-    if(snap.size>=5) return alert('登録できる車両は5台までです');
-    data.createdAt=serverTimestamp(); await addDoc(collection(db,`users/${currentUser.uid}/cars`),data);
+    if(cachedCars.length>=5) return alert('登録できる車両は5台までです');
+    const maxOrder = cachedCars.length > 0 ? Math.max(...cachedCars.map(c => c.sortOrder ?? 0)) : -1;
+    data.sortOrder = maxOrder + 1;
+    data.createdAt=serverTimestamp();
+    await addDoc(collection(db,`users/${currentUser.uid}/cars`),data);
   }
+
   showToast('車両情報を保存しました'); $('carModal').classList.remove('active'); loadCars();
 });
 
@@ -1330,20 +1341,49 @@ $('addCarBtn').addEventListener('click',()=>{
   $('carModal').classList.add('active');
 });
 async function loadCars() {
-  const snap=await getDocs(collection(db,`users/${currentUser.uid}/cars`));
-  const list=$('carList'); list.innerHTML=''; $('globalCarSelect').innerHTML='';
-  $('addCarBtn').disabled=snap.size>=5; $('addCarBtn').classList.toggle('opacity-40',snap.size>=5);
-  snap.forEach(d=>{
-    const c=d.data();
-    const opt=document.createElement('option'); opt.value=d.id; opt.textContent=c.nickname; $('globalCarSelect').appendChild(opt);
-    const sb=expiryBadge(daysUntil(c.shaken)),ib=expiryBadge(daysUntil(c.insurance?.expiry)),jb=expiryBadge(daysUntil(c.jibaiInsurance?.expiry));
-    const div=document.createElement('div'); div.className='bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
-    div.innerHTML=`<div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3"><h3 class="font-bold text-lg">${c.nickname}</h3><p class="text-blue-200 text-xs">${c.maker||''} ${c.model||''} ${c.year?'('+c.year+')':''}</p></div><div class="p-4 space-y-2"><div class="flex justify-between items-center text-sm"><span class="text-slate-500">走行距離</span><span class="font-bold text-blue-700">${(c.odo||0).toLocaleString()} km</span></div><div class="flex flex-wrap gap-1"><span class="text-xs px-2 py-0.5 rounded-full ${sb.cls}">車検 ${sb.label}</span><span class="text-xs px-2 py-0.5 rounded-full ${ib.cls}">任意保険 ${ib.label}</span><span class="text-xs px-2 py-0.5 rounded-full ${jb.cls}">自賠責 ${jb.label}</span></div><div class="flex justify-between items-center pt-1"><span class="text-xs text-slate-400">${c.plate||'ナンバー未登録'}</span><span class="text-blue-600 text-xs font-bold">詳細を見る →</span></div></div>`;
-    div.addEventListener('click',()=>openDetailModal(d.id,c));
+  const colRef = collection(db, `users/${currentUser.uid}/cars`);
+  let snap = await getDocs(colRef);
+
+  // 旧データへのsortOrder自動付与（カテゴリ・店舗マスタと同じ2段階マイグレーション）
+  if (!snap.empty && snap.docs.some(d => d.data().sortOrder === undefined)) {
+    const sorted = snap.docs.slice().sort((a,b) => (a.data().createdAt?.toMillis?.()||0) - (b.data().createdAt?.toMillis?.()||0));
+    const batch = writeBatch(db);
+    sorted.forEach((d, i) => { if (d.data().sortOrder === undefined) batch.update(doc(colRef, d.id), { sortOrder: i }); });
+    await batch.commit();
+    snap = await getDocs(colRef);
+  }
+
+  cachedCars = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  const list = $('carList'); list.innerHTML = ''; $('globalCarSelect').innerHTML = '';
+  $('addCarBtn').disabled = cachedCars.length >= 5; $('addCarBtn').classList.toggle('opacity-40', cachedCars.length >= 5);
+
+  cachedCars.forEach(c => {
+    const opt = document.createElement('option'); opt.value = c.id; opt.textContent = c.nickname; $('globalCarSelect').appendChild(opt);
+    const sb = expiryBadge(daysUntil(c.shaken)), ib = expiryBadge(daysUntil(c.insurance?.expiry)), jb = expiryBadge(daysUntil(c.jibaiInsurance?.expiry));
+    const div = document.createElement('div'); div.className = 'bg-white rounded-2xl shadow-sm overflow-hidden cursor-pointer hover:shadow-md transition';
+    div.innerHTML = `<div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-4 py-3"><h3 class="font-bold text-lg">${c.nickname}</h3><p class="text-blue-200 text-xs">${c.maker||''} ${c.model||''} ${c.year?'('+c.year+')':''}</p></div><div class="p-4 space-y-2"><div class="flex justify-between items-center text-sm"><span class="text-slate-500">走行距離</span><span class="font-bold text-blue-700">${(c.odo||0).toLocaleString()} km</span></div><div class="flex flex-wrap gap-1"><span class="text-xs px-2 py-0.5 rounded-full ${sb.cls}">車検 ${sb.label}</span><span class="text-xs px-2 py-0.5 rounded-full ${ib.cls}">任意保険 ${ib.label}</span><span class="text-xs px-2 py-0.5 rounded-full ${jb.cls}">自賠責 ${jb.label}</span></div><div class="flex justify-between items-center pt-1"><span class="text-xs text-slate-400">${c.plate||'ナンバー未登録'}</span><span class="text-blue-600 text-xs font-bold">詳細を見る →</span></div></div>`;
+    div.addEventListener('click', () => openDetailModal(c.id, c));
     list.appendChild(div);
   });
-  if($('globalCarSelect').value){currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint();}
+
+  if ($('globalCarSelect').value) { currentCarId = $('globalCarSelect').value; loadFuel(); loadMaint(); }
+  renderCarOrderList();
 }
+
+function renderCarOrderList() {
+  const listEl = $('carOrderList');
+  if (!listEl) return;
+  listEl.innerHTML = '';
+  cachedCars.forEach((car, idx) => {
+    const li = document.createElement('li'); li.className = 'flex items-center gap-2 py-2';
+    li.innerHTML = `<div class="flex flex-col gap-0.5"><button class="sort-btn carUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button><button class="sort-btn carDown" data-idx="${idx}" ${idx===cachedCars.length-1?'disabled':''}>▼</button></div><span class="flex-1 font-semibold text-sm">${car.nickname}</span>`;
+    listEl.appendChild(li);
+  });
+  listEl.querySelectorAll('.carUp').forEach(btn => { btn.addEventListener('click', async () => { const i = parseInt(btn.dataset.idx); if (i === 0) return; await swapSortOrder('cars', cachedCars, i, i - 1); await loadCars(); }); });
+  listEl.querySelectorAll('.carDown').forEach(btn => { btn.addEventListener('click', async () => { const i = parseInt(btn.dataset.idx); if (i === cachedCars.length - 1) return; await swapSortOrder('cars', cachedCars, i, i + 1); await loadCars(); }); });
+}
+
 $('globalCarSelect').addEventListener('change',()=>{currentCarId=$('globalCarSelect').value; loadFuel(); loadMaint();});
 
 // ============================================================
