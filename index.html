@@ -171,11 +171,13 @@
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🏪 店舗マスタの管理</h3>
       <p class="text-xs text-slate-400 -mt-2 mb-3">※メンテナンス予約・チケット購入店舗で使用（給油店舗は下の専用マスタで管理）</p>
-      <div class="grid grid-cols-2 gap-2 mb-3">
-        <input type="text" id="newShopName" placeholder="店舗名" class="border border-slate-300 p-2 rounded-lg text-sm">
+           <div class="grid grid-cols-2 gap-2 mb-3">
+        <input type="text" id="newShopName" placeholder="店舗名" class="border border-slate-300 p-2 rounded-lg text-sm col-span-2">
         <input type="tel" id="newShopTel" placeholder="電話番号" class="border border-slate-300 p-2 rounded-lg text-sm">
+        <input type="text" id="newShopStaff" placeholder="デフォルト担当者（任意）" class="border border-slate-300 p-2 rounded-lg text-sm">
         <button id="addShopBtn" class="col-span-2 bg-blue-600 text-white py-2 rounded-lg font-bold text-sm">店舗を追加</button>
       </div>
+
       <ul id="shopList" class="text-sm divide-y divide-slate-100"></ul>
     </div>
     <div class="bg-white p-4 rounded-xl shadow-sm">
@@ -515,8 +517,10 @@
       <button id="closeMaintModal" class="text-2xl text-slate-400">&times;</button>
     </div>
     <div class="p-5 space-y-3 text-sm">
-      <input type="hidden" id="maintDocId">
-      <select id="mCategory" class="border p-2.5 rounded-xl w-full"></select>
+       <input type="hidden" id="maintDocId">
+      <input type="hidden" id="maintStatus">
+      <select id="mCategorySelect" class="border p-2.5 rounded-xl w-full mb-1"></select>
+      <input type="text" id="mCategoryFree" placeholder="または直接入力（マスタにないカテゴリ名を自由入力）" class="border p-2.5 rounded-xl w-full text-xs mb-2">
       <select id="mShop" class="border p-2.5 rounded-xl w-full"></select>
       <input type="text" id="mStaff" placeholder="担当者名" class="border p-2.5 rounded-xl w-full">
       <div class="grid grid-cols-2 gap-2">
@@ -525,6 +529,7 @@
       </div>
       <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
       <button id="addToGCalBtn" type="button" class="w-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 py-2 rounded-xl font-bold text-xs transition">🗓️ この内容をGoogleカレンダーに追加</button>
+
       <div class="border-t pt-3">
 
         <p class="text-xs font-bold text-slate-600 mb-2">↓ 完了時に入力（未実施なら空欄でOK）</p>
@@ -831,12 +836,27 @@ async function swapSortOrder(colName, cache, iA, iB) {
   await updateDoc(doc(db,`users/${currentUser.uid}/${colName}`,b.id),{sortOrder:tmp});
 }
 function renderCategorySelects() {
-  const sel=$('mCategory'), prev=sel.value;
+  const sel=$('mCategorySelect'); if(!sel) return; const prev=sel.value;
   sel.innerHTML='<option value="">作業カテゴリを選択</option>';
   cachedCategories.forEach(cat=>{ const o=document.createElement('option'); o.value=cat.name; o.textContent=cat.name; sel.appendChild(o); });
   if(prev) sel.value=prev;
 }
-$('mCategory').addEventListener('change', () => { $('workChecklistBlock').classList.toggle('hidden', !shouldShowChecklist($('mCategory').value)); });
+$('mCategorySelect').addEventListener('change', () => {
+  $('workChecklistBlock').classList.toggle('hidden', !shouldShowChecklist($('mCategorySelect').value));
+  if ($('mCategorySelect').value) $('mCategoryFree').value = '';
+});
+$('mCategoryFree').addEventListener('input', () => {
+  $('workChecklistBlock').classList.toggle('hidden', !shouldShowChecklist($('mCategoryFree').value));
+  if ($('mCategoryFree').value.trim()) $('mCategorySelect').value = '';
+});
+// v1.7.0追加: 店舗選択時、担当者欄が空の場合のみデフォルト担当者を自動入力（手入力済みの内容は上書きしない）
+$('mShop').addEventListener('change', () => {
+  const shop = cachedShops.find(s => s.name === $('mShop').value);
+  if (shop && shop.staffName && !$('mStaff').value.trim()) {
+    $('mStaff').value = shop.staffName;
+  }
+});
+
 function renderWorkChecklist(checked=[]) {
   const c=$('workChecklist'); if(!c) return; c.innerHTML='';
   cachedCategories.forEach(cat => {
@@ -880,9 +900,11 @@ function renderShopList() {
         <div class="flex-1 space-y-1">
           <input type="text" value="${shop.name}" data-id="${shop.id}" data-field="name" class="shopEditInput w-full border border-slate-200 rounded px-2 py-1 text-sm">
           <input type="tel" value="${shop.tel||''}" data-id="${shop.id}" data-field="tel" class="shopEditInput w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-500" placeholder="電話番号">
+          <input type="text" value="${shop.staffName||''}" data-id="${shop.id}" data-field="staffName" class="shopEditInput w-full border border-slate-200 rounded px-2 py-1 text-xs text-slate-500" placeholder="デフォルト担当者（任意）">
         </div>
         <button class="shopDelBtn text-red-500 text-xs font-bold px-2 py-1 border border-red-200 rounded flex-shrink-0" data-id="${shop.id}">削除</button>
       </div>`;
+
     listEl.appendChild(li);
   });
   listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('shops',cachedShops,i,i-1); await loadShops(); }); });
@@ -907,9 +929,10 @@ function renderShopSelects() {
 $('addShopBtn').addEventListener('click', async () => {
   const name=$('newShopName').value.trim(); if(!name) return;
   const maxOrder=cachedShops.length>0?Math.max(...cachedShops.map(s=>s.sortOrder??0)):-1;
-  await addDoc(collection(db,`users/${currentUser.uid}/shops`),{name,tel:$('newShopTel').value.trim(),sortOrder:maxOrder+1,createdAt:serverTimestamp()});
-  $('newShopName').value=''; $('newShopTel').value=''; await loadShops();
+  await addDoc(collection(db,`users/${currentUser.uid}/shops`),{name,tel:$('newShopTel').value.trim(),staffName:$('newShopStaff').value.trim(),sortOrder:maxOrder+1,createdAt:serverTimestamp()});
+  $('newShopName').value=''; $('newShopTel').value=''; $('newShopStaff').value=''; await loadShops();
 });
+
 
 // ============================================================
 // 給油店舗マスタ
@@ -1623,17 +1646,33 @@ document.querySelectorAll('.maintSub').forEach(btn=>{
     $('maintListDone').classList.toggle('hidden',btn.dataset.status!=='done');
   });
 });
+function resetMaintModal() {
+  $('maintDocId').value = '';
+  $('maintStatus').value = '';
+  document.querySelectorAll('#maintModal input:not([type=hidden],[type=checkbox]),#maintModal select,#maintModal textarea').forEach(i=>i.value='');
+  $('workChecklistBlock').classList.add('hidden');
+  renderWorkChecklist([]);
+  $('saveMaintReserveBtn').classList.remove('hidden');
+  $('saveMaintDoneBtn').textContent = '✅ 完了にする';
+}
 $('addMaintBtn').addEventListener('click',()=>{
   if(!currentCarId) return alert('先に車両を選択してください');
-  $('maintDocId').value='';
-  document.querySelectorAll('#maintModal input:not([type=hidden],[type=checkbox]),#maintModal select,#maintModal textarea').forEach(i=>i.value='');
-  $('workChecklistBlock').classList.add('hidden'); renderWorkChecklist([]); $('maintModal').classList.add('active');
+  resetMaintModal();
+  $('maintModal').classList.add('active');
 });
 $('closeMaintModal').addEventListener('click',()=>$('maintModal').classList.remove('active'));
-async function saveMaint(status) {
+
+async function saveMaint(actionType) {
   if(!currentCarId) return alert('先に車両を選択してください');
   const checkedWorks=[...document.querySelectorAll('.workCheckItem:checked')].map(cb=>cb.value);
-  const data={status,category:$('mCategory').value,shopId:$('mShop').value,staffName:$('mStaff').value,
+  const category = $('mCategorySelect').value || $('mCategoryFree').value.trim();
+  if (!category) return alert('作業カテゴリを選択または入力してください');
+
+  // 元が「完了」だった記録は、更新時も完了ステータスを維持する（誤って予約中へ戻さないための安全策）
+  let status = actionType;
+  if ($('maintStatus').value === '完了') status = '完了';
+
+  const data={status,category,shopId:$('mShop').value,staffName:$('mStaff').value,
     reservationDate:$('mResDate').value,reservationTime:$('mResTime').value,memo:$('mMemo').value,
     completedDate:$('mDoneDate').value,completedOdo:Number($('mDoneOdo').value)||null,
     actualCost:Number($('mCost').value)||null,workDetail:$('mWork').value,
@@ -1643,16 +1682,18 @@ async function saveMaint(status) {
   showToast(status==='完了'?'完了記録を保存しました':'予約を保存しました');
   $('maintModal').classList.remove('active'); loadMaint();
 }
+
 $('addToGCalBtn').addEventListener('click', () => {
   const date = $('mResDate').value;
   if (!date) { alert('カレンダーに追加するには、予約日を入力してください'); return; }
 
   const carName = cachedCars.find(c => c.id === currentCarId)?.nickname || '';
-  const category = $('mCategory').value || 'メンテナンス';
+  const category = $('mCategorySelect').value || $('mCategoryFree').value.trim() || 'メンテナンス';
   const shop = $('mShop').value || '';
   const staff = $('mStaff').value || '';
   const memo = $('mMemo').value || '';
   const time = $('mResTime').value || '';
+
 
   const title = `🔧 ${carName ? '['+carName+'] ' : ''}${category}`;
   const dates = toGCalDateTime(date, time);
@@ -1678,38 +1719,65 @@ async function loadMaint() {
   if(!currentCarId) return;
   const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`),orderBy('createdAt','desc')));
   const aL=$('maintListActive'),dL=$('maintListDone'); aL.innerHTML=''; dL.innerHTML='';
-  let ac=0,dc=0;
+
+  const activeLogs=[], doneLogs=[];
   snap.forEach(d=>{
-    const m=d.data(), div=document.createElement('div');
-    div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    if(m.status==='完了'){
-      dc++;
-      const wh=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
-      div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex justify-end"><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
-      dL.appendChild(div);
-    } else {
-      ac++;
-      const days=daysUntil(m.reservationDate);
-      div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${d.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${d.id}">削除</button></div>`;
-      aL.appendChild(div);
-    }
+    const m=d.data(); m.id=d.id;
+    if(m.status==='完了') doneLogs.push(m); else activeLogs.push(m);
   });
-  if(ac===0) aL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
-  if(dc===0) dL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
+
+  // 完了済みは実施日(completedDate)の新しい順。同日の場合はcreatedAtで判定
+  doneLogs.sort((a,b)=>{
+    const dA=a.completedDate||'', dB=b.completedDate||'';
+    if(dA!==dB) return dA>dB?-1:1;
+    return (b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0);
+  });
+
+  activeLogs.forEach(m=>{
+    const days=daysUntil(m.reservationDate);
+    const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${m.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${m.id}">削除</button></div>`;
+    aL.appendChild(div);
+  });
+
+  doneLogs.forEach(m=>{
+    const wh=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
+    const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+    div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex gap-2 justify-end pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold border border-blue-200 px-2 py-0.5 rounded" data-id="${m.id}">✏️ 編集</button><button class="delMaintBtn text-red-500 text-xs border border-red-200 px-2 py-0.5 rounded" data-id="${m.id}">削除</button></div>`;
+    dL.appendChild(div);
+  });
+
+  if(activeLogs.length===0) aL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
+  if(doneLogs.length===0) dL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
+
   document.querySelectorAll('.editMaintBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
+      resetMaintModal();
       const s=await getDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)), m=s.data();
-      $('maintDocId').value=btn.dataset.id; $('mCategory').value=m.category||''; $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
+      $('maintDocId').value=btn.dataset.id;
+      $('maintStatus').value=m.status||'';
+
+      if(cachedCategories.some(c=>c.name===m.category)){ $('mCategorySelect').value=m.category; $('mCategoryFree').value=''; }
+      else { $('mCategorySelect').value=''; $('mCategoryFree').value=m.category||''; }
+
+      $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
       $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
       $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
       $('mDoneOdo').value=m.completedOdo||''; $('mCost').value=m.actualCost||''; $('mWork').value=m.workDetail||'';
       $('mNext').value=m.nextScheduleDate||''; $('mDoneNote').value=m.doneNote||'';
       $('workChecklistBlock').classList.toggle('hidden',!shouldShowChecklist(m.category||''));
-      renderWorkChecklist(m.checkedWorks||[]); $('maintModal').classList.add('active');
+      renderWorkChecklist(m.checkedWorks||[]);
+
+      if(m.status==='完了'){
+        $('saveMaintReserveBtn').classList.add('hidden');
+        $('saveMaintDoneBtn').textContent='💾 更新する';
+      }
+      $('maintModal').classList.add('active');
     });
   });
   document.querySelectorAll('.delMaintBtn').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)); loadMaint();});});
 }
+
 // ============================================================
 // v1.5.0 バックアップ・復元機能
 // ============================================================
