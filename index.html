@@ -520,7 +520,10 @@
         <div><label class="text-xs text-slate-500 block mb-1">予約時間</label><input type="time" id="mResTime" class="border p-2.5 rounded-xl w-full"></div>
       </div>
       <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
+            <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
+      <button id="addToGCalBtn" type="button" class="w-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 py-2 rounded-xl font-bold text-xs transition">🗓️ この内容をGoogleカレンダーに追加</button>
       <div class="border-t pt-3">
+
         <p class="text-xs font-bold text-slate-600 mb-2">↓ 完了時に入力（未実施なら空欄でOK）</p>
         <div class="grid grid-cols-2 gap-2 mb-2">
           <div><label class="text-xs text-slate-500 block mb-1">実施日</label><input type="date" id="mDoneDate" class="border p-2.5 rounded-xl w-full"></div>
@@ -671,6 +674,22 @@ function showToast(msg) {
 }
 function shouldShowChecklist(cat) { return CHECKLIST_CATEGORIES.some(c => (cat||'').includes(c)); }
 function isStandalonePWA() { return window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches; }
+// v1.6.1 追加: Googleカレンダー連携用の日時フォーマット変換
+function toGCalDateTime(dateStr, timeStr) {
+  if (!timeStr) {
+    // 時間未入力 → 終日予定（Googleカレンダーの仕様上、終了日は翌日を指定する）
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const endDate = new Date(y, m - 1, d + 1);
+    const fmtDate = dt => `${dt.getFullYear()}${String(dt.getMonth()+1).padStart(2,'0')}${String(dt.getDate()).padStart(2,'0')}`;
+    return `${dateStr.replace(/-/g,'')}/${fmtDate(endDate)}`;
+  }
+  // 時間入力あり → 1時間枠の予定
+  const start = new Date(`${dateStr}T${timeStr}:00+09:00`);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const fmt = dt => dt.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  return `${fmt(start)}/${fmt(end)}`;
+}
+
 
 async function doLogin() {
   try {
@@ -1621,6 +1640,35 @@ async function saveMaint(status) {
   showToast(status==='完了'?'完了記録を保存しました':'予約を保存しました');
   $('maintModal').classList.remove('active'); loadMaint();
 }
+$('addToGCalBtn').addEventListener('click', () => {
+  const date = $('mResDate').value;
+  if (!date) { alert('カレンダーに追加するには、予約日を入力してください'); return; }
+
+  const carName = currentDetailCarData?.nickname || '';
+  const category = $('mCategory').value || 'メンテナンス';
+  const shop = $('mShop').value || '';
+  const staff = $('mStaff').value || '';
+  const memo = $('mMemo').value || '';
+  const time = $('mResTime').value || '';
+
+  const title = `🔧 ${carName ? '['+carName+'] ' : ''}${category}`;
+  const dates = toGCalDateTime(date, time);
+  const detailLines = [];
+  if (staff) detailLines.push(`担当: ${staff}`);
+  if (memo) detailLines.push(`備考: ${memo}`);
+  detailLines.push('― マイカー管理アプリより追加 ―');
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: title,
+    dates,
+    details: detailLines.join('\n'),
+    location: shop
+  });
+
+  window.open(`https://calendar.google.com/calendar/render?${params.toString()}`, '_blank');
+});
+
 $('saveMaintReserveBtn').addEventListener('click',()=>saveMaint('予約済み'));
 $('saveMaintDoneBtn').addEventListener('click',()=>saveMaint('完了'));
 async function loadMaint() {
