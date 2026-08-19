@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="マイカー管理">
 <meta name="theme-color" content="#1d4ed8">
 <title>マイカー管理アプリ</title>
-<link rel="apple-touch-icon" href="A_minimalist_iPhone_app_icon_for_vehicle_fleet_man-1786890892613.png">
+<link rel="apple-touch-icon" href="icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
@@ -720,7 +720,9 @@ onAuthStateChanged(auth, async user => {
     $('loginBtn').classList.add('hidden'); $('logoutBtn').classList.remove('hidden');
     $('unauthScreen').classList.add('hidden'); $('authScreen').classList.remove('hidden');
     await loadTabOrder(); await loadCategories(); await loadShops(); await loadFuelShops(); await loadCars();
+    await migrateNOJTickets(); // v1.8.0追加: NOJチケットの過去履歴を自動移行
   } else {
+
     currentUser = null;
     $('loginBtn').classList.remove('hidden'); $('logoutBtn').classList.add('hidden');
     $('unauthScreen').classList.remove('hidden'); $('authScreen').classList.add('hidden');
@@ -1327,12 +1329,18 @@ async function loadTicketList(carId) {
       if(!confirm(`「${btn.dataset.name}」を1枚使用しますか？`)) return;
       const memo=prompt('メモ（任意）','')||'';
       const today=new Date().toISOString().slice(0,10), carId=btn.dataset.car, newRem=rem-1;
+
+      // v1.8.0追加: チケット名に「NOJ」を含む場合はボディメンテナンスとして記録する
+      const tName = btn.dataset.name;
+      const targetCategory = tName.toUpperCase().includes('NOJ') ? 'ボディメンテナンス' : '洗車・コーティング';
+
       await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,btn.dataset.id),{remaining:newRem,usageHistory:arrayUnion({date:today,memo})});
-      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),{status:'完了',category:'洗車・コーティング',completedDate:today,completedOdo:null,actualCost:0,workDetail:`${btn.dataset.name}（チケット使用・残り${newRem}枚）`,doneNote:memo,createdAt:serverTimestamp()});
+      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),{status:'完了',category:targetCategory,completedDate:today,completedOdo:null,actualCost:0,workDetail:`${tName}（チケット使用・残り${newRem}枚）`,doneNote:memo,createdAt:serverTimestamp()});
       showToast(`チケットを1枚使用しました（残り${newRem}枚）`);
       loadTicketList(carId); if(currentCarId===carId) loadMaint();
     });
   });
+
   list.querySelectorAll('.delTicketBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{ if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${btn.dataset.car}/ticketPacks`,btn.dataset.id)); loadTicketList(btn.dataset.car); });
   });
@@ -1916,6 +1924,48 @@ $('restoreInput').addEventListener('change', async e => {
     $('restoreInput').disabled = false; $('backupBtn').disabled = false;
   }
 });
+// ============================================================
+// v1.8.0 過去のNOJチケット履歴を「ボディメンテナンス」へ自動移行
+// ============================================================
+async function migrateNOJTickets() {
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+
+  // 1. カテゴリマスタに「ボディメンテナンス」がなければ追加
+  const catRef = collection(db, `users/${uid}/categories`);
+  const catSnap = await getDocs(catRef);
+  const hasBodyMaint = catSnap.docs.some(d => d.data().name === 'ボディメンテナンス');
+  if (!hasBodyMaint) {
+    const maxOrder = catSnap.docs.length > 0 ? Math.max(...catSnap.docs.map(d => d.data().sortOrder ?? 0)) : -1;
+    await addDoc(catRef, { name: 'ボディメンテナンス', sortOrder: maxOrder + 1, createdAt: serverTimestamp() });
+    await loadCategories(); // 実際のFirestore IDでキャッシュを正しく再読込する
+  }
+
+  // 2. 全車両のメンテ記録を走査し、該当するものだけを書き換え
+  const carsSnap = await getDocs(collection(db, `users/${uid}/cars`));
+  const batch = writeBatch(db);
+  let migrateCount = 0;
+
+  for (const car of carsSnap.docs) {
+    const maintRef = collection(db, `users/${uid}/cars/${car.id}/maintenanceLogs`);
+    const maintSnap = await getDocs(maintRef);
+    maintSnap.forEach(mDoc => {
+      const m = mDoc.data();
+      // カテゴリが「洗車・コーティング」で、作業内容に「NOJ」を含むものだけを対象にする
+      if (m.category === '洗車・コーティング' && m.workDetail && m.workDetail.toUpperCase().includes('NOJ')) {
+        batch.update(doc(maintRef, mDoc.id), { category: 'ボディメンテナンス' });
+        migrateCount++;
+      }
+    });
+  }
+
+  if (migrateCount > 0) {
+    await batch.commit();
+    showToast(`過去の記録${migrateCount}件をボディメンテナンスへ移行しました`);
+    if (currentCarId) loadMaint();
+  }
+}
+
 
 </script>
 </body>
