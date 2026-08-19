@@ -206,14 +206,18 @@
             <input type="file" id="restoreInput" accept=".json" class="hidden">
           </label>
         </div>
+        <!-- 修正後 -->
         <div id="backupStatus" class="hidden text-sm text-center py-2 px-3 rounded-lg"></div>
       </div>
     </div>
 
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-1 text-slate-700">📋 バージョン情報</h3>
       <p id="versionInfoText" class="text-xs text-slate-500 mb-2"></p>
       <button id="openChangelogBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-2 rounded-lg text-sm font-bold transition">📝 変更履歴（CHANGELOG）を確認する</button>
     </div>
   </section>
+
 </main>
 
 <div id="changelogModal" class="modal fixed inset-0 z-50 bg-black/60 items-end sm:items-center justify-center">
@@ -520,7 +524,6 @@
         <div><label class="text-xs text-slate-500 block mb-1">予約時間</label><input type="time" id="mResTime" class="border p-2.5 rounded-xl w-full"></div>
       </div>
       <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
-            <input type="text" id="mMemo" placeholder="備考（予約時）" class="border p-2.5 rounded-xl w-full">
       <button id="addToGCalBtn" type="button" class="w-full bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 py-2 rounded-xl font-bold text-xs transition">🗓️ この内容をGoogleカレンダーに追加</button>
       <div class="border-t pt-3">
 
@@ -601,7 +604,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.6.0'; // v1.6.0へ更新
+const APP_VERSION = '1.6.1'; // v1.6.1へ更新
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -1644,7 +1647,7 @@ $('addToGCalBtn').addEventListener('click', () => {
   const date = $('mResDate').value;
   if (!date) { alert('カレンダーに追加するには、予約日を入力してください'); return; }
 
-  const carName = currentDetailCarData?.nickname || '';
+  const carName = cachedCars.find(c => c.id === currentCarId)?.nickname || '';
   const category = $('mCategory').value || 'メンテナンス';
   const shop = $('mShop').value || '';
   const staff = $('mStaff').value || '';
