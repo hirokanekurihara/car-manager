@@ -499,7 +499,9 @@
       <input type="text" id="tName" placeholder="パック名（例：手洗い洗車5回券）" class="border p-2.5 rounded-xl col-span-2">
 
       <input type="number" id="tTotal" placeholder="総枚数" min="1" class="border p-2.5 rounded-xl">
-      <input type="number" id="tCost" placeholder="購入金額(円)" class="border p-2.5 rounded-xl">
+      <input type="number" id="tRemaining" placeholder="残り枚数（新規時は空欄でOK）" min="0" class="border p-2.5 rounded-xl">
+      <input type="number" id="tCost" placeholder="購入金額(円)" class="border p-2.5 rounded-xl col-span-2">
+
       <div><label class="text-xs text-slate-500 block mb-1">購入日</label><input type="date" id="tBuyDate" class="border p-2.5 rounded-xl w-full"></div>
       <div><label class="text-xs text-slate-500 block mb-1">有効期限（任意）</label><input type="date" id="tExpiry" class="border p-2.5 rounded-xl w-full"></div>
       <div class="col-span-2">
@@ -611,7 +613,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.9.2'; // v1.9.2へ更新
+const APP_VERSION = '1.9.3'; // v1.9.3へ更新
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -722,8 +724,10 @@ onAuthStateChanged(auth, async user => {
     $('loginBtn').classList.add('hidden'); $('logoutBtn').classList.remove('hidden');
     $('unauthScreen').classList.add('hidden'); $('authScreen').classList.remove('hidden');
     await loadTabOrder(); await loadCategories(); await loadShops(); await loadFuelShops(); await loadCars();
-    await migrateNOJTickets(); // v1.8.0追加: NOJチケットの過去履歴を自動移行
+    await migrateNOJTickets();
+    await migrateTicketHistoryFromMaintLogs(); // v1.9.3追加
   } else {
+
 
     currentUser = null;
     $('loginBtn').classList.remove('hidden'); $('logoutBtn').classList.add('hidden');
@@ -1304,20 +1308,30 @@ $('saveTicketBtn').addEventListener('click',async()=>{
   const shop=$('tShopSelect').value||$('tShopFree').value.trim();
   const colRef = collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`);
 
+  // v1.9.3: 残り枚数を直接指定可能に（空欄なら従来通りの自動計算にフォールバック）
+  const remInput = $('tRemaining').value.trim();
+  let safeRem;
+  if (remInput === '') {
+    if (docId) {
+      const snap = await getDoc(doc(colRef, docId));
+      const currentRem = snap.exists() ? (snap.data().remaining || 0) : total;
+      safeRem = Math.min(currentRem, total);
+    } else {
+      safeRem = total;
+    }
+  } else {
+    safeRem = Math.min(Math.max(parseInt(remInput)||0, 0), total);
+  }
+
   if (docId) {
-    // 編集モード：総枚数を減らしても残数が超過しないよう安全補正
-    const snap = await getDoc(doc(colRef, docId));
-    const currentRem = snap.exists() ? (snap.data().remaining || 0) : total;
-    const newRem = Math.min(currentRem, total);
     await updateDoc(doc(colRef, docId), {
-      name, total, remaining: newRem, cost: Number($('tCost').value)||0,
+      name, total, remaining: safeRem, cost: Number($('tCost').value)||0,
       buyDate: $('tBuyDate').value, expiry: $('tExpiry').value, shop
     });
     showToast('チケット情報を更新しました');
   } else {
-    // 新規登録モード
     await addDoc(colRef,{
-      name,total,remaining:total,cost:Number($('tCost').value)||0,
+      name,total,remaining:safeRem,cost:Number($('tCost').value)||0,
       buyDate:$('tBuyDate').value,expiry:$('tExpiry').value,shop,usageHistory:[],createdAt:serverTimestamp()
     });
     showToast('チケットパックを登録しました');
@@ -1325,6 +1339,7 @@ $('saveTicketBtn').addEventListener('click',async()=>{
   $('ticketModal').classList.remove('active'); $('carDetailModal').classList.add('active');
   loadTicketList(carId);
 });
+
 
 async function loadTicketList(carId) {
   const snap=await getDocs(query(collection(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`),orderBy('createdAt','desc')));
@@ -1339,7 +1354,6 @@ async function loadTicketList(carId) {
     const barColor=isFinished?'bg-slate-300':(t.remaining<=1?'bg-yellow-500':'bg-purple-500');
     const expBadge=t.expiry?expiryBadge(daysUntil(t.expiry)):null;
 
-    // ── 使用履歴HTML（新しい順・全件・残り枚数付き）──
     const usageArr = t.usageHistory || [];
     const HIST_PREVIEW = 3;
     const reversedWithIdx = usageArr.map((h,i)=>({h,origIdx:i})).reverse();
@@ -1360,11 +1374,9 @@ async function loadTicketList(carId) {
             data-date="${h.date}" data-memo="${h.memo||''}" data-name="${t.name}">取消</button>
         </li>`;
       };
-
       const previewHtml = reversedWithIdx.slice(0,HIST_PREVIEW).map(x=>buildRow(x.h,x.origIdx)).join('');
       const hiddenHtml  = reversedWithIdx.slice(HIST_PREVIEW).map(x=>buildRow(x.h,x.origIdx)).join('');
       const hasMore = reversedWithIdx.length > HIST_PREVIEW;
-
       histRowsHtml = `
         <ul class="space-y-0.5">${previewHtml}</ul>
         ${hasMore
@@ -1396,7 +1408,11 @@ async function loadTicketList(carId) {
       ${expBadge?`<span class="inline-block text-xs px-2 py-0.5 rounded-full ${expBadge.cls} mb-2">有効期限 ${t.expiry}（${expBadge.label}）</span>`:''}
 
       <div class="border-t border-slate-100 pt-2 mt-1 mb-3">
-        <p class="text-xs font-bold text-slate-500 mb-1">📋 使用履歴</p>
+        <div class="flex justify-between items-center mb-1">
+          <p class="text-xs font-bold text-slate-500">📋 使用履歴</p>
+          <button class="addPastUsageBtn text-xs text-purple-600 underline flex-shrink-0"
+            data-id="${packId}" data-car="${carId}" data-name="${t.name}" data-rem="${t.remaining}">＋ 過去の使用を追加</button>
+        </div>
         ${histRowsHtml}
       </div>
 
@@ -1414,20 +1430,16 @@ async function loadTicketList(carId) {
     list.appendChild(div);
   });
 
-  // ── もっと見るトグル ──
   list.querySelectorAll('.toggleHistBtn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       const moreEl=document.getElementById(`histMore-${btn.dataset.pack}`);
       const isOpen=btn.dataset.open==='true';
       moreEl.classList.toggle('hidden',isOpen);
       btn.dataset.open=isOpen?'false':'true';
-      btn.textContent=isOpen
-        ?`▼ もっと見る（${moreEl.querySelectorAll('li').length}件）`
-        :'▲ 閉じる';
+      btn.textContent=isOpen?`▼ もっと見る（${moreEl.querySelectorAll('li').length}件）`:'▲ 閉じる';
     });
   });
 
-  // ── 1枚使用する ──
   list.querySelectorAll('.useTicketBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       const rem=parseInt(btn.dataset.rem,10); if(rem<=0) return;
@@ -1446,7 +1458,32 @@ async function loadTicketList(carId) {
     });
   });
 
-  // ── 使用履歴：取消 ──
+  // v1.9.3追加: 過去の使用を任意の日付で追加（データ補修用）
+  list.querySelectorAll('.addPastUsageBtn').forEach(btn=>{
+    btn.addEventListener('click', async () => {
+      const carId=btn.dataset.car, packId=btn.dataset.id, tName=btn.dataset.name;
+      const rem=parseInt(btn.dataset.rem,10);
+      if(rem<=0){ alert('残り枚数が0のため追加できません。先に「✏️編集」で総枚数・残り枚数を調整してください'); return; }
+
+      const inputDate=prompt('過去に使用した日付を入力してください（YYYY-MM-DD）', new Date().toISOString().slice(0,10));
+      if(inputDate===null) return;
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(inputDate.trim())){ alert('日付はYYYY-MM-DD形式で入力してください'); return; }
+      const memo=prompt('メモ（任意）','')||'';
+
+      const newRem=rem-1;
+      const targetCategory=tName.toUpperCase().includes('NOJ')?'ボディメンテナンス':'洗車・コーティング';
+
+      await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId),
+        {remaining:newRem, usageHistory:arrayUnion({date:inputDate.trim(), memo})});
+      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),
+        {status:'完了',category:targetCategory,completedDate:inputDate.trim(),completedOdo:null,actualCost:0,
+         workDetail:`${tName}（チケット使用・残り${newRem}枚）`,doneNote:memo,createdAt:serverTimestamp()});
+
+      showToast(`過去の使用記録を追加しました（残り${newRem}枚）`);
+      loadTicketList(carId); if(currentCarId===carId) loadMaint();
+    });
+  });
+
   list.querySelectorAll('.cancelHistBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       const carId=btn.dataset.car, packId=btn.dataset.pack;
@@ -1476,7 +1513,6 @@ async function loadTicketList(carId) {
     });
   });
 
-  // ── 使用履歴：編集 ──
   list.querySelectorAll('.editHistBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       const carId=btn.dataset.car, packId=btn.dataset.pack;
@@ -1508,7 +1544,6 @@ async function loadTicketList(carId) {
     });
   });
 
-  // ── チケットパック編集 ──
   list.querySelectorAll('.editTicketBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       const carId=btn.dataset.car;
@@ -1518,7 +1553,8 @@ async function loadTicketList(carId) {
       $('ticketDocId').value=btn.dataset.id;
       $('ticketCarDocId').value=carId;
       $('ticketModalTitle').textContent='🎫 チケットパックを編集';
-      $('tName').value=t.name||''; $('tTotal').value=t.total||''; $('tCost').value=t.cost||'';
+      $('tName').value=t.name||''; $('tTotal').value=t.total||''; $('tRemaining').value=t.remaining ?? '';
+      $('tCost').value=t.cost||'';
       $('tBuyDate').value=t.buyDate||''; $('tExpiry').value=t.expiry||'';
       const m=cachedShops.find(s=>s.name===t.shop);
       if(m){$('tShopSelect').value=t.shop;$('tShopFree').value='';}
@@ -1528,7 +1564,6 @@ async function loadTicketList(carId) {
     });
   });
 
-  // ── 削除 ──
   list.querySelectorAll('.delTicketBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
       if(!confirm('削除しますか？')) return;
@@ -1537,8 +1572,6 @@ async function loadTicketList(carId) {
     });
   });
 }
-
-
 
 // ============================================================
 // 分析タブ
@@ -2157,6 +2190,45 @@ async function migrateNOJTickets() {
     await batch.commit();
     showToast(`過去の記録${migrateCount}件をボディメンテナンスへ移行しました`);
     if (currentCarId) loadMaint();
+  }
+}
+// v1.9.3 追加: usageHistoryが空なのに使用済み扱いになっているチケットを、
+// メンテ完了記録から可能な範囲で復元する（非破壊的・見つからなければ何もしない）
+async function migrateTicketHistoryFromMaintLogs() {
+  if (!currentUser) return;
+  const uid = currentUser.uid;
+  const carsSnap = await getDocs(collection(db, `users/${uid}/cars`));
+  let recoveredCount = 0;
+
+  for (const carDoc of carsSnap.docs) {
+    const carId = carDoc.id;
+    const ticketRef = collection(db, `users/${uid}/cars/${carId}/ticketPacks`);
+    const ticketSnap = await getDocs(ticketRef);
+
+    for (const tDoc of ticketSnap.docs) {
+      const t = tDoc.data();
+      const usageArr = t.usageHistory || [];
+      if (usageArr.length > 0) continue;              // 既に履歴がある場合は対象外
+      if ((t.total || 0) <= (t.remaining || 0)) continue; // 未使用のチケットは対象外
+
+      const maintRef = collection(db, `users/${uid}/cars/${carId}/maintenanceLogs`);
+      const maintSnap = await getDocs(maintRef);
+      const matched = maintSnap.docs
+        .map(d => d.data())
+        .filter(m => m.workDetail && m.workDetail.includes(t.name) && m.completedDate)
+        .sort((a,b) => (a.completedDate||'').localeCompare(b.completedDate||''));
+
+      if (matched.length === 0) continue; // 対応する記録が見つからなければ何もしない
+
+      const rebuilt = matched.map(m => ({ date: m.completedDate, memo: m.doneNote || '' }));
+      await updateDoc(doc(ticketRef, tDoc.id), { usageHistory: rebuilt }); // remainingは触らない
+      recoveredCount++;
+    }
+  }
+
+  if (recoveredCount > 0) {
+    showToast(`${recoveredCount}件のチケットで使用履歴を復元しました`);
+    if (currentDetailCarData) loadTicketList(currentDetailCarData.id);
   }
 }
 
