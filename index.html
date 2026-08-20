@@ -613,7 +613,7 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.9.3'; // v1.9.3へ更新
+const APP_VERSION = '1.9.4'; // v1.9.4へ更新
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -1441,108 +1441,97 @@ async function loadTicketList(carId) {
   });
 
   list.querySelectorAll('.useTicketBtn').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      const rem=parseInt(btn.dataset.rem,10); if(rem<=0) return;
-      if(!confirm(`「${btn.dataset.name}」を1枚使用しますか？`)) return;
-      const memo=prompt('メモ（任意）','')||'';
-      const today=new Date().toISOString().slice(0,10), carId=btn.dataset.car, newRem=rem-1;
-      const tName=btn.dataset.name;
-      const targetCategory=tName.toUpperCase().includes('NOJ')?'ボディメンテナンス':'洗車・コーティング';
-      await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,btn.dataset.id),
-        {remaining:newRem,usageHistory:arrayUnion({date:today,memo})});
-      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),
-        {status:'完了',category:targetCategory,completedDate:today,completedOdo:null,actualCost:0,
-         workDetail:`${tName}（チケット使用・残り${newRem}枚）`,doneNote:memo,createdAt:serverTimestamp()});
-      showToast(`チケットを1枚使用しました（残り${newRem}枚）`);
-      loadTicketList(carId); if(currentCarId===carId) loadMaint();
-    });
-  });
+  btn.addEventListener('click',async()=>{
+    const rem=parseInt(btn.dataset.rem,10); if(rem<=0) return;
+    if(!confirm(`「${btn.dataset.name}」を1枚使用しますか？`)) return;
+    const memo=prompt('メモ（任意）','')||'';
+    const today=new Date().toISOString().slice(0,10), carId=btn.dataset.car, newRem=rem-1;
 
-  // v1.9.3追加: 過去の使用を任意の日付で追加（データ補修用）
+    await updateDoc(
+      doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,btn.dataset.id),
+      { remaining:newRem, usageHistory:arrayUnion({date:today, memo}) }
+    );
+
+    showToast(`チケットを1枚使用しました（残り${newRem}枚）`);
+    loadTicketList(carId);
+  });
+});
+
+
   list.querySelectorAll('.addPastUsageBtn').forEach(btn=>{
-    btn.addEventListener('click', async () => {
-      const carId=btn.dataset.car, packId=btn.dataset.id, tName=btn.dataset.name;
-      const rem=parseInt(btn.dataset.rem,10);
-      if(rem<=0){ alert('残り枚数が0のため追加できません。先に「✏️編集」で総枚数・残り枚数を調整してください'); return; }
+  btn.addEventListener('click', async () => {
+    const carId=btn.dataset.car, packId=btn.dataset.id;
+    const rem=parseInt(btn.dataset.rem,10);
+    if(rem<=0){
+      alert('残り枚数が0のため追加できません。先に「✏️編集」で総枚数・残り枚数を調整してください');
+      return;
+    }
+    const inputDate=prompt('過去に使用した日付を入力してください（YYYY-MM-DD）', new Date().toISOString().slice(0,10));
+    if(inputDate===null) return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(inputDate.trim())){
+      alert('日付はYYYY-MM-DD形式で入力してください'); return;
+    }
+    const memo=prompt('メモ（任意）','')||'';
+    const newRem=rem-1;
 
-      const inputDate=prompt('過去に使用した日付を入力してください（YYYY-MM-DD）', new Date().toISOString().slice(0,10));
-      if(inputDate===null) return;
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(inputDate.trim())){ alert('日付はYYYY-MM-DD形式で入力してください'); return; }
-      const memo=prompt('メモ（任意）','')||'';
+    await updateDoc(
+      doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId),
+      { remaining:newRem, usageHistory:arrayUnion({date:inputDate.trim(), memo}) }
+    );
 
-      const newRem=rem-1;
-      const targetCategory=tName.toUpperCase().includes('NOJ')?'ボディメンテナンス':'洗車・コーティング';
-
-      await updateDoc(doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId),
-        {remaining:newRem, usageHistory:arrayUnion({date:inputDate.trim(), memo})});
-      await addDoc(collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`),
-        {status:'完了',category:targetCategory,completedDate:inputDate.trim(),completedOdo:null,actualCost:0,
-         workDetail:`${tName}（チケット使用・残り${newRem}枚）`,doneNote:memo,createdAt:serverTimestamp()});
-
-      showToast(`過去の使用記録を追加しました（残り${newRem}枚）`);
-      loadTicketList(carId); if(currentCarId===carId) loadMaint();
-    });
+    showToast(`過去の使用記録を追加しました（残り${newRem}枚）`);
+    loadTicketList(carId);
   });
+});
+
 
   list.querySelectorAll('.cancelHistBtn').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      const carId=btn.dataset.car, packId=btn.dataset.pack;
-      const targetDate=btn.dataset.date, targetMemo=btn.dataset.memo, tName=btn.dataset.name;
-      const idx=parseInt(btn.dataset.idx,10);
-      if(!confirm(`「${tName}」の${targetDate}の使用を取り消しますか？\n残り枚数が1枚増えます。`)) return;
-      const packRef=doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId);
-      const packSnap=await getDoc(packRef); if(!packSnap.exists()) return;
-      const p=packSnap.data();
-      const history=[...(p.usageHistory||[])];
-      history.splice(idx,1);
-      const newRem=Math.min((p.remaining||0)+1,p.total);
-      await updateDoc(packRef,{remaining:newRem,usageHistory:history});
-      const maintRef=collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`);
-      const maintSnap=await getDocs(maintRef);
-      const toDelete=maintSnap.docs.filter(mDoc=>{
-        const m=mDoc.data();
-        return m.completedDate===targetDate && m.workDetail&&m.workDetail.includes(tName) && (m.doneNote||'')===targetMemo;
-      });
-      if(toDelete.length>0){
-        const batch=writeBatch(db);
-        toDelete.forEach(mDoc=>batch.delete(doc(maintRef,mDoc.id)));
-        await batch.commit();
-      }
-      showToast(`取り消しました（残り${newRem}枚）${toDelete.length>0?'。メンテ記録も削除しました':''}`);
-      loadTicketList(carId); if(currentCarId===carId) loadMaint();
-    });
+  btn.addEventListener('click',async()=>{
+    const carId=btn.dataset.car, packId=btn.dataset.pack;
+    const targetDate=btn.dataset.date, tName=btn.dataset.name;
+    const idx=parseInt(btn.dataset.idx,10);
+    if(!confirm(`「${tName}」の${targetDate}の使用を取り消しますか？\n残り枚数が1枚増えます。`)) return;
+
+    const packRef=doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId);
+    const packSnap=await getDoc(packRef); if(!packSnap.exists()) return;
+    const p=packSnap.data();
+    const history=[...(p.usageHistory||[])];
+    history.splice(idx,1);
+    const newRem=Math.min((p.remaining||0)+1,p.total);
+
+    await updateDoc(packRef,{ remaining:newRem, usageHistory:history });
+
+    showToast(`取り消しました（残り${newRem}枚）`);
+    loadTicketList(carId);
   });
+});
+
 
   list.querySelectorAll('.editHistBtn').forEach(btn=>{
-    btn.addEventListener('click',async()=>{
-      const carId=btn.dataset.car, packId=btn.dataset.pack;
-      const targetDate=btn.dataset.date, oldMemo=btn.dataset.memo, tName=btn.dataset.name;
-      const idx=parseInt(btn.dataset.idx,10);
-      const newDate=prompt('使用日を修正してください（YYYY-MM-DD）',targetDate);
-      if(newDate===null) return;
-      if(!/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())){alert('日付はYYYY-MM-DD形式で入力してください'); return;}
-      const newMemo=prompt('メモを修正してください',oldMemo);
-      if(newMemo===null) return;
-      const packRef=doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId);
-      const packSnap=await getDoc(packRef); if(!packSnap.exists()) return;
-      const history=[...(packSnap.data().usageHistory||[])];
-      history[idx]={date:newDate.trim(),memo:newMemo};
-      await updateDoc(packRef,{usageHistory:history});
-      const maintRef=collection(db,`users/${currentUser.uid}/cars/${carId}/maintenanceLogs`);
-      const maintSnap=await getDocs(maintRef);
-      const toUpdate=maintSnap.docs.filter(mDoc=>{
-        const m=mDoc.data();
-        return m.completedDate===targetDate && m.workDetail&&m.workDetail.includes(tName) && (m.doneNote||'')===oldMemo;
-      });
-      if(toUpdate.length>0){
-        const batch=writeBatch(db);
-        toUpdate.forEach(mDoc=>batch.update(doc(maintRef,mDoc.id),{completedDate:newDate.trim(),doneNote:newMemo,updatedAt:serverTimestamp()}));
-        await batch.commit();
-      }
-      showToast('使用履歴を更新しました');
-      loadTicketList(carId); if(currentCarId===carId) loadMaint();
-    });
+  btn.addEventListener('click',async()=>{
+    const carId=btn.dataset.car, packId=btn.dataset.pack;
+    const targetDate=btn.dataset.date, oldMemo=btn.dataset.memo;
+    const idx=parseInt(btn.dataset.idx,10);
+    const newDate=prompt('使用日を修正してください（YYYY-MM-DD）',targetDate);
+    if(newDate===null) return;
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(newDate.trim())){
+      alert('日付はYYYY-MM-DD形式で入力してください'); return;
+    }
+    const newMemo=prompt('メモを修正してください',oldMemo);
+    if(newMemo===null) return;
+
+    const packRef=doc(db,`users/${currentUser.uid}/cars/${carId}/ticketPacks`,packId);
+    const packSnap=await getDoc(packRef); if(!packSnap.exists()) return;
+    const history=[...(packSnap.data().usageHistory||[])];
+    history[idx]={ date:newDate.trim(), memo:newMemo };
+
+    await updateDoc(packRef,{ usageHistory:history });
+
+    showToast('使用履歴を更新しました');
+    loadTicketList(carId);
   });
+});
+
 
   list.querySelectorAll('.editTicketBtn').forEach(btn=>{
     btn.addEventListener('click',async()=>{
