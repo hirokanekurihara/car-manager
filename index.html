@@ -159,6 +159,15 @@
       <ul id="carOrderList" class="text-sm divide-y divide-slate-100"></ul>
     </div>
 
+      <!-- v1.10.0 追加: 車両詳細タブの並び替え -->
+    <div class="bg-white p-4 rounded-xl shadow-sm">
+      <h3 class="font-bold mb-1 text-slate-700">🚙 車両詳細タブの表示順</h3>
+      <p class="text-xs text-slate-400 mb-3">▲▼で並び替え。車両詳細画面（基本・保険・タイヤなど）の並び順に反映されます。先頭に設定したタブが、詳細を開いた際に最初に表示されます。</p>
+      <ul id="detailTabOrderList" class="text-sm divide-y divide-slate-100 mb-3"></ul>
+      <button id="resetDetailTabOrderBtn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 py-2 rounded-lg text-sm font-bold transition">↩️ 初期の並び順に戻す</button>
+    </div>
+
+
     <div class="bg-white p-4 rounded-xl shadow-sm">
       <h3 class="font-bold mb-3 text-slate-700">🔧 作業カテゴリの管理</h3>
       <p class="text-xs text-slate-400 -mt-2 mb-3">※「車検整備」「定期点検」選択時のみ完了画面にチェックリストが表示されます</p>
@@ -243,8 +252,9 @@
       </div>
       <button id="closeDetailModal" class="text-white text-3xl leading-none opacity-70 hover:opacity-100">&times;</button>
     </div>
-    <div class="bg-blue-800 px-2 py-2 flex gap-1 text-xs font-semibold flex-shrink-0 overflow-x-auto">
+    <div id="detailTabNav" class="bg-blue-800 px-2 py-2 flex gap-1 text-xs font-semibold flex-shrink-0 overflow-x-auto">
       <button class="detail-tab-btn active flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-basic">📋 基本</button>
+
       <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-insurance">🛡️ 保険</button>
       <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-tire">🔵 タイヤ</button>
       <button class="detail-tab-btn flex-1 py-1.5 rounded-lg text-white/70 transition whitespace-nowrap px-1" data-dtarget="dtab-ticket">🎫 チケット</button>
@@ -613,7 +623,10 @@ import {
   updateDoc, deleteDoc, query, orderBy, serverTimestamp, arrayUnion, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-const APP_VERSION = '1.9.4'; // v1.9.4へ更新
+const DEFAULT_DETAIL_TAB_ORDER = ['dtab-basic','dtab-insurance','dtab-tire','dtab-ticket','dtab-plan','dtab-analysis'];
+const DETAIL_TAB_LABELS = { 'dtab-basic':'📋 基本', 'dtab-insurance':'🛡️ 保険', 'dtab-tire':'🔵 タイヤ', 'dtab-ticket':'🎫 チケット', 'dtab-plan':'📅 計画', 'dtab-analysis':'📊 分析' };
+
+const APP_VERSION = '1.10.0';
 const DEFAULT_TAB_ORDER = ['cars','fuel','maint','settings'];
 const TAB_LABELS = { cars:'🚘 車両', fuel:'⛽ 給油', maint:'🔧 メンテ', settings:'⚙️ 設定' };
 const CHECKLIST_CATEGORIES = ['車検整備', '定期点検'];
@@ -643,6 +656,8 @@ let currentTabOrder = [...DEFAULT_TAB_ORDER];
 let activeTabKey = null;
 let chartMonthly = null, chartDonut = null, chartEfficiency = null;
 let editingFuelId = null;
+let currentDetailTabOrder = [...DEFAULT_DETAIL_TAB_ORDER];
+
 
 const $ = id => document.getElementById(id);
 $('appVersionLabel').textContent = 'v' + APP_VERSION;
@@ -724,6 +739,7 @@ onAuthStateChanged(auth, async user => {
     $('loginBtn').classList.add('hidden'); $('logoutBtn').classList.remove('hidden');
     $('unauthScreen').classList.add('hidden'); $('authScreen').classList.remove('hidden');
     await loadTabOrder(); await loadCategories(); await loadShops(); await loadFuelShops(); await loadCars();
+    await loadDetailTabOrder(); // v1.10.0追加
     await migrateNOJTickets();
     await migrateTicketHistoryFromMaintLogs(); // v1.9.3追加
   } else {
@@ -834,7 +850,7 @@ function renderCategoryList() {
     listEl.appendChild(li);
   });
   listEl.querySelectorAll('.catUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('categories',cachedCategories,i,i-1); await loadCategories(); }); });
-  listEl.querySelectorAll('.catDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedCategories.length-1) return; await swapSortOrder('categories',cachedCategories,i,i+1); await loadCategories(); }); });
+  listEl.querySelectorAll('.catDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedCategories.length-1) return; await ('categories',cachedCategories,i,i+1); await loadCategories(); }); });
   listEl.querySelectorAll('.catEditInput').forEach(inp => { inp.addEventListener('change', async () => { if(!inp.value.trim()) return; await updateDoc(doc(db,`users/${currentUser.uid}/categories`,inp.dataset.id),{name:inp.value.trim()}); await loadCategories(); }); });
   listEl.querySelectorAll('.catDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/categories`,btn.dataset.id)); await loadCategories(); }); });
 }
@@ -915,8 +931,8 @@ function renderShopList() {
 
     listEl.appendChild(li);
   });
-  listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('shops',cachedShops,i,i-1); await loadShops(); }); });
-  listEl.querySelectorAll('.shopDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedShops.length-1) return; await swapSortOrder('shops',cachedShops,i,i+1); await loadShops(); }); });
+  listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await ('shops',cachedShops,i,i-1); await loadShops(); }); });
+  listEl.querySelectorAll('.shopDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedShops.length-1) return; await ('shops',cachedShops,i,i+1); await loadShops(); }); });
   listEl.querySelectorAll('.shopEditInput').forEach(inp => {
     inp.addEventListener('change', async () => {
       const upd={}; upd[inp.dataset.field]=inp.value.trim();
@@ -1048,10 +1064,26 @@ function openDetailModal(carId, carData) {
   const twb=tireAgeBadge(tw.made); $('tire-winter-age').textContent=twb?twb.label:''; $('tire-winter-age').className=`text-xs px-2 py-0.5 rounded-full ${twb?twb.cls:''}`;
   document.querySelectorAll('.detail-tab-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.detail-tab-content').forEach(c=>c.classList.add('hidden'));
-  document.querySelector('[data-dtarget="dtab-basic"]').classList.add('active'); $('dtab-basic').classList.remove('hidden');
+
+  // v1.10.0: 保存された順序どおりにタブボタンを並び替える（既存ノードの移動なので、
+  // 元々ついているクリックイベントリスナーはそのまま保持される）
+  const navEl = $('detailTabNav');
+  currentDetailTabOrder.forEach(key => {
+    const btn = document.querySelector(`.detail-tab-btn[data-dtarget="${key}"]`);
+    if (btn) navEl.appendChild(btn);
+  });
+  const firstKey = currentDetailTabOrder[0] || 'dtab-basic';
+  document.querySelector(`.detail-tab-btn[data-dtarget="${firstKey}"]`).classList.add('active');
+  $(firstKey).classList.remove('hidden');
+
   loadTicketList(carId);
+  // v1.10.0追加: 先頭タブが分析／計画の場合、グラフや年間計画データを取り忘れないようにする
+  if (firstKey === 'dtab-analysis') loadAnalysis(carId, currentDetailCarData);
+  if (firstKey === 'dtab-plan') loadPlanTab(carId, currentDetailCarData);
+
   $('carDetailModal').classList.add('active');
 }
+
 $('closeDetailModal').addEventListener('click',()=>$('carDetailModal').classList.remove('active'));
 
 document.querySelectorAll('.detail-tab-btn').forEach(btn => {
@@ -1957,19 +1989,23 @@ async function loadMaint() {
     return (b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0);
   });
 
-  activeLogs.forEach(m=>{
+   activeLogs.forEach(m=>{
     const days=daysUntil(m.reservationDate);
+    const shopStr = m.shopId ? ` ／ ${m.shopId}` : ''; // v1.10.0追加
     const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${m.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${m.id}">削除</button></div>`;
+    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}${shopStr}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${m.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${m.id}">削除</button></div>`;
     aL.appendChild(div);
   });
 
+
   doneLogs.forEach(m=>{
     const wh=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
+    const shopStr = m.shopId ? ` ／ ${m.shopId}` : ''; // v1.10.0追加
     const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex gap-2 justify-end pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold border border-blue-200 px-2 py-0.5 rounded" data-id="${m.id}">✏️ 編集</button><button class="delMaintBtn text-red-500 text-xs border border-red-200 px-2 py-0.5 rounded" data-id="${m.id}">削除</button></div>`;
+    div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}${shopStr}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex gap-2 justify-end pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold border border-blue-200 px-2 py-0.5 rounded" data-id="${m.id}">✏️ 編集</button><button class="delMaintBtn text-red-500 text-xs border border-red-200 px-2 py-0.5 rounded" data-id="${m.id}">削除</button></div>`;
     dL.appendChild(div);
   });
+
 
   if(activeLogs.length===0) aL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
   if(doneLogs.length===0) dL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
@@ -2220,6 +2256,41 @@ async function migrateTicketHistoryFromMaintLogs() {
     if (currentDetailCarData) loadTicketList(currentDetailCarData.id);
   }
 }
+
+async function loadDetailTabOrder() {
+  try {
+    const snap = await getDoc(doc(db, `users/${currentUser.uid}/settings/appSettings`));
+    if (snap.exists() && Array.isArray(snap.data().detailTabOrder)) {
+      const saved = snap.data().detailTabOrder.filter(k => DEFAULT_DETAIL_TAB_ORDER.includes(k));
+      DEFAULT_DETAIL_TAB_ORDER.forEach(k => { if (!saved.includes(k)) saved.push(k); });
+      currentDetailTabOrder = saved;
+    } else {
+      currentDetailTabOrder = [...DEFAULT_DETAIL_TAB_ORDER];
+    }
+  } catch {
+    currentDetailTabOrder = [...DEFAULT_DETAIL_TAB_ORDER];
+  }
+  renderDetailTabOrderList();
+}
+
+function renderDetailTabOrderList() {
+  const listEl = $('detailTabOrderList'); if (!listEl) return;
+  listEl.innerHTML = '';
+  currentDetailTabOrder.forEach((key, idx) => {
+    const li = document.createElement('li'); li.className = 'flex items-center gap-2 py-2';
+    li.innerHTML = `<div class="flex flex-col gap-0.5"><button class="sort-btn dtabUp" data-idx="${idx}" ${idx===0?'disabled':''}>▲</button><button class="sort-btn dtabDown" data-idx="${idx}" ${idx===currentDetailTabOrder.length-1?'disabled':''}>▼</button></div><span class="flex-1 font-semibold text-sm">${DETAIL_TAB_LABELS[key]||key}</span>`;
+    listEl.appendChild(li);
+  });
+  listEl.querySelectorAll('.dtabUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; [currentDetailTabOrder[i-1],currentDetailTabOrder[i]]=[currentDetailTabOrder[i],currentDetailTabOrder[i-1]]; await saveDetailTabOrder(); }); });
+  listEl.querySelectorAll('.dtabDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===currentDetailTabOrder.length-1) return; [currentDetailTabOrder[i],currentDetailTabOrder[i+1]]=[currentDetailTabOrder[i+1],currentDetailTabOrder[i]]; await saveDetailTabOrder(); }); });
+}
+
+async function saveDetailTabOrder() {
+  await setDoc(doc(db, `users/${currentUser.uid}/settings/appSettings`), { detailTabOrder: currentDetailTabOrder }, { merge: true });
+  renderDetailTabOrderList();
+  showToast('車両詳細タブの順序を保存しました');
+}
+$('resetDetailTabOrderBtn').addEventListener('click', async () => { currentDetailTabOrder=[...DEFAULT_DETAIL_TAB_ORDER]; await saveDetailTabOrder(); showToast('初期の並び順に戻しました'); });
 
 
 </script>
