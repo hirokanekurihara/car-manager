@@ -1982,30 +1982,76 @@ async function loadMaint() {
     if(m.status==='完了') doneLogs.push(m); else activeLogs.push(m);
   });
 
-  // 完了済みは実施日(completedDate)の新しい順。同日の場合はcreatedAtで判定
+  // ── 予約中・進行中：店舗名を表示 ──
+  activeLogs.forEach(m=>{
+    const days=daysUntil(m.reservationDate);
+    const shopStr = m.shopId ? ` ／ ${m.shopId}` : '';
+    const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}${shopStr}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${m.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${m.id}">削除</button></div>`;
+    aL.appendChild(div);
+  });
+
+  // ── 完了済み：実施日の新しい順にソート ──
   doneLogs.sort((a,b)=>{
     const dA=a.completedDate||'', dB=b.completedDate||'';
     if(dA!==dB) return dA>dB?-1:1;
     return (b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0);
   });
 
-   activeLogs.forEach(m=>{
-    const days=daysUntil(m.reservationDate);
-    const shopStr = m.shopId ? ` ／ ${m.shopId}` : ''; // v1.10.0追加
-    const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    div.innerHTML=`<div class="flex justify-between items-start"><div><p class="font-bold">${m.category}${shopStr}</p><p class="text-xs text-slate-500">${m.reservationDate||'未定'} ${m.reservationTime||''} ／ ${m.staffName||''}</p></div><span class="px-2 py-0.5 rounded-full text-xs ${reserveColor(days)}">${days!==null?(days<0?'期限超過':`残り${days}日`):'未予約'}</span></div>${m.memo?`<p class="text-xs text-slate-400">📝 ${m.memo}</p>`:''}<div class="flex gap-2 pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold" data-id="${m.id}">編集/完了にする</button><button class="delMaintBtn text-red-500 text-xs" data-id="${m.id}">削除</button></div>`;
-    aL.appendChild(div);
+  // ── 年→月でグループ化 ──
+  const grouped = {};
+  doneLogs.forEach(m => {
+    const dateStr = m.completedDate || '';
+    const year = dateStr.length >= 4 ? dateStr.substring(0, 4) : '年不明';
+    const month = dateStr.length >= 7 ? (parseInt(dateStr.substring(5, 7), 10) + '月') : '月不明';
+    if (!grouped[year]) grouped[year] = { count: 0, months: {} };
+    grouped[year].count++;
+    if (!grouped[year].months[month]) grouped[year].months[month] = [];
+    grouped[year].months[month].push(m);
   });
 
+  const currentYear = new Date().getFullYear().toString();
 
-  doneLogs.forEach(m=>{
-    const wh=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
-    const shopStr = m.shopId ? ` ／ ${m.shopId}` : ''; // v1.10.0追加
-    const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
-    div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}${shopStr}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex gap-2 justify-end pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold border border-blue-200 px-2 py-0.5 rounded" data-id="${m.id}">✏️ 編集</button><button class="delMaintBtn text-red-500 text-xs border border-red-200 px-2 py-0.5 rounded" data-id="${m.id}">削除</button></div>`;
-    dL.appendChild(div);
+  // ── 年の降順で描画（当年は展開・過去年は折りたたみ）──
+  Object.keys(grouped).sort((a, b) => b.localeCompare(a)).forEach(year => {
+    const yearData = grouped[year];
+    const isCurrentYear = (year === currentYear || year === '年不明');
+
+    const yearHeader = document.createElement('button');
+    yearHeader.className = 'w-full flex justify-between items-center bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg font-bold text-sm mt-4 mb-2 transition';
+    yearHeader.innerHTML = `<span>${isCurrentYear ? '▼' : '▶'} ${year}年</span><span class="text-xs font-normal text-slate-500">${yearData.count}件</span>`;
+
+    const yearContainer = document.createElement('div');
+    yearContainer.className = `space-y-2 ${isCurrentYear ? '' : 'hidden'}`;
+
+    yearHeader.addEventListener('click', () => {
+      const wasHidden = yearContainer.classList.contains('hidden');
+      yearContainer.classList.toggle('hidden');
+      yearHeader.innerHTML = `<span>${wasHidden ? '▼' : '▶'} ${year}年</span><span class="text-xs font-normal text-slate-500">${yearData.count}件</span>`;
+    });
+
+    dL.appendChild(yearHeader);
+    dL.appendChild(yearContainer);
+
+    // ── 月の降順で描画 ──
+    Object.keys(yearData.months).sort((a, b) => {
+      if (a === '月不明') return 1; if (b === '月不明') return -1;
+      return parseInt(b) - parseInt(a);
+    }).forEach(month => {
+      const monthHeader = document.createElement('div');
+      monthHeader.className = 'flex items-center gap-2 my-2';
+      monthHeader.innerHTML = `<div class="h-px bg-slate-200 flex-1"></div><span class="text-xs font-bold text-slate-400">${month}</span><div class="h-px bg-slate-200 flex-1"></div>`;
+      yearContainer.appendChild(monthHeader);
+
+      yearData.months[month].forEach(m => {
+        const wh=(m.checkedWorks||[]).map(w=>`<span class="bg-green-100 text-green-700 text-xs px-1.5 py-0.5 rounded">${w}</span>`).join(' ');
+        const shopStr = m.shopId ? ` ／ ${m.shopId}` : '';
+        const div=document.createElement('div'); div.className='bg-white p-3 rounded-xl shadow-sm text-sm space-y-1';
+        div.innerHTML=`<p class="font-bold text-green-700">✅ ${m.category}${shopStr}</p><p class="text-xs text-slate-500">実施日:${m.completedDate||'-'} ／ ¥${(m.actualCost||0).toLocaleString()}${m.workDetail?' ／ '+m.workDetail:''}</p>${wh?`<div class="flex flex-wrap gap-1 mt-1">${wh}</div>`:''} ${m.memo?`<p class="text-xs text-slate-400 mt-1">📝 予約メモ: ${m.memo}</p>`:''} ${m.doneNote?`<p class="text-xs text-slate-400 mt-1">📝 完了備考: ${m.doneNote}</p>`:''} ${m.nextScheduleDate?`<p class="text-xs text-blue-600 mt-1">次回予定: ${m.nextScheduleDate}</p>`:''}<div class="flex gap-2 justify-end pt-1"><button class="editMaintBtn text-blue-600 text-xs font-bold border border-blue-200 px-2 py-0.5 rounded" data-id="${m.id}">✏️ 編集</button><button class="delMaintBtn text-red-500 text-xs border border-red-200 px-2 py-0.5 rounded" data-id="${m.id}">削除</button></div>`;
+        yearContainer.appendChild(div);
+      });
+    });
   });
-
 
   if(activeLogs.length===0) aL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">予約中の記録はありません</p>';
   if(doneLogs.length===0) dL.innerHTML='<p class="text-center text-slate-400 text-sm py-6">完了済みの記録はありません</p>';
@@ -2016,10 +2062,8 @@ async function loadMaint() {
       const s=await getDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)), m=s.data();
       $('maintDocId').value=btn.dataset.id;
       $('maintStatus').value=m.status||'';
-
       if(cachedCategories.some(c=>c.name===m.category)){ $('mCategorySelect').value=m.category; $('mCategoryFree').value=''; }
       else { $('mCategorySelect').value=''; $('mCategoryFree').value=m.category||''; }
-
       $('mShop').value=m.shopId||''; $('mStaff').value=m.staffName||'';
       $('mResDate').value=m.reservationDate||''; $('mResTime').value=m.reservationTime||''; $('mMemo').value=m.memo||'';
       $('mDoneDate').value=m.completedDate||new Date().toISOString().slice(0,10);
@@ -2027,7 +2071,6 @@ async function loadMaint() {
       $('mNext').value=m.nextScheduleDate||''; $('mDoneNote').value=m.doneNote||'';
       $('workChecklistBlock').classList.toggle('hidden',!shouldShowChecklist(m.category||''));
       renderWorkChecklist(m.checkedWorks||[]);
-
       if(m.status==='完了'){
         $('saveMaintReserveBtn').classList.add('hidden');
         $('saveMaintDoneBtn').textContent='💾 更新する';
@@ -2035,8 +2078,15 @@ async function loadMaint() {
       $('maintModal').classList.add('active');
     });
   });
-  document.querySelectorAll('.delMaintBtn').forEach(btn=>{btn.addEventListener('click',async()=>{if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id)); loadMaint();});});
+  document.querySelectorAll('.delMaintBtn').forEach(btn=>{
+    btn.addEventListener('click',async()=>{
+      if(!confirm('削除しますか？')) return;
+      await deleteDoc(doc(db,`users/${currentUser.uid}/cars/${currentCarId}/maintenanceLogs`,btn.dataset.id));
+      loadMaint();
+    });
+  });
 }
+
 
 // ============================================================
 // v1.5.0 バックアップ・復元機能
