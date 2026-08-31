@@ -850,7 +850,7 @@ function renderCategoryList() {
     listEl.appendChild(li);
   });
   listEl.querySelectorAll('.catUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('categories',cachedCategories,i,i-1); await loadCategories(); }); });
-  listEl.querySelectorAll('.catDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedCategories.length-1) return; await ('categories',cachedCategories,i,i+1); await loadCategories(); }); });
+  listEl.querySelectorAll('.catDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedCategories.length-1) return; await swapSortOrder('categories',cachedCategories,i,i+1); await loadCategories(); }); });
   listEl.querySelectorAll('.catEditInput').forEach(inp => { inp.addEventListener('change', async () => { if(!inp.value.trim()) return; await updateDoc(doc(db,`users/${currentUser.uid}/categories`,inp.dataset.id),{name:inp.value.trim()}); await loadCategories(); }); });
   listEl.querySelectorAll('.catDelBtn').forEach(btn => { btn.addEventListener('click', async () => { if(!confirm('削除しますか？')) return; await deleteDoc(doc(db,`users/${currentUser.uid}/categories`,btn.dataset.id)); await loadCategories(); }); });
 }
@@ -931,8 +931,8 @@ function renderShopList() {
 
     listEl.appendChild(li);
   });
-  listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await ('shops',cachedShops,i,i-1); await loadShops(); }); });
-  listEl.querySelectorAll('.shopDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedShops.length-1) return; await ('shops',cachedShops,i,i+1); await loadShops(); }); });
+  listEl.querySelectorAll('.shopUp').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===0) return; await swapSortOrder('shops',cachedShops,i,i-1); await loadShops(); }); });
+listEl.querySelectorAll('.shopDown').forEach(btn => { btn.addEventListener('click', async () => { const i=parseInt(btn.dataset.idx); if(i===cachedShops.length-1) return; await swapSortOrder('shops',cachedShops,i,i+1); await loadShops(); }); });
   listEl.querySelectorAll('.shopEditInput').forEach(inp => {
     inp.addEventListener('change', async () => {
       const upd={}; upd[inp.dataset.field]=inp.value.trim();
